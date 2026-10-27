@@ -30,10 +30,18 @@
         <button type="button" class="fleche" id="jour-precedent" aria-label="Jour précédent">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
         </button>
-        <button type="button" class="titre-date" id="titre-date" aria-label="Revenir à aujourd'hui">
-          <span class="jour-semaine" id="jour-semaine"></span>
-          <span class="jour-date" id="jour-date"></span>
-        </button>
+        <div class="titre-date" id="titre-date">
+          <span class="ligne-semaine">
+            <span class="jour-semaine" id="jour-semaine"></span>
+            <button type="button" class="retour" id="btn-aujourdhui" hidden>↩ Aujourd'hui</button>
+          </span>
+          <span class="jour-date">
+            <span id="jour-date"></span>
+            <svg class="icone-calendrier" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </span>
+          <!-- Calendrier : champ date invisible posé sur le titre (toucher la date l'ouvre) -->
+          <input type="date" class="choix-date" id="choix-date" aria-label="Choisir une date">
+        </div>
         <button type="button" class="fleche" id="jour-suivant" aria-label="Jour suivant">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
         </button>

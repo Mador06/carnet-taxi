@@ -154,10 +154,12 @@ async function afficherJournee() {
   const estAujourdhui = etat.jour === aujourdhui();
   const titre = titreDuJour(etat.jour);
   const semaine = $('#jour-semaine');
-  if (estAujourdhui) semaine.replaceChildren(`Aujourd'hui · ${titre.semaine}`);
-  else semaine.replaceChildren(`${titre.semaine} · `, el('span', { className: 'retour', textContent: "↩ Aujourd'hui" }));
+  semaine.textContent = estAujourdhui ? `Aujourd'hui · ${titre.semaine}` : `${titre.semaine} ·`;
   semaine.classList.toggle('autre-jour', !estAujourdhui);
+  $('#btn-aujourdhui').hidden = estAujourdhui;
   $('#jour-date').textContent = titre.date;
+  $('#choix-date').value = etat.jour;
+  $('#choix-date').disabled = false;
 
   // Totaux (les courses données à un collègue ne comptent pas)
   const somme = liste => liste.reduce((s, c) => s + (c.prix || 0), 0);
@@ -194,9 +196,11 @@ async function afficherJournee() {
 
 // « Bons manquants » : toutes les courses Médical / Médical donné sans bon, groupées par date
 function afficherBonsManquants(sansBon) {
-  $('#jour-semaine').replaceChildren('Tous les jours');
+  $('#jour-semaine').textContent = 'Tous les jours';
   $('#jour-semaine').classList.add('autre-jour');
+  $('#btn-aujourdhui').hidden = true;
   $('#jour-date').textContent = 'Bons manquants';
+  $('#choix-date').disabled = true;   // pas de calendrier dans ce mode
 
   const total = sansBon.medical.length + sansBon.donne.length;
   $('#resume-libelle').textContent = 'Bons de transport à récupérer';
@@ -305,8 +309,18 @@ function changerJour(iso) {
 
 $('#jour-precedent').addEventListener('click', () => changerJour(decalerJour(etat.jour, -1)));
 $('#jour-suivant').addEventListener('click', () => changerJour(decalerJour(etat.jour, 1)));
-$('#titre-date').addEventListener('click', () => {
-  if (etat.filtre === 'jour') changerJour(aujourdhui());
+$('#btn-aujourdhui').addEventListener('click', () => changerJour(aujourdhui()));
+
+// Calendrier : sur iPhone, toucher le champ invisible ouvre le calendrier du téléphone.
+// Sur ordinateur, on l'ouvre nous-mêmes (sinon il faudrait viser la petite icône).
+const choixDate = $('#choix-date');
+choixDate.addEventListener('click', () => {
+  try { choixDate.showPicker(); } catch { /* ancien navigateur : rien à faire */ }
+});
+choixDate.addEventListener('change', () => {
+  // « Effacer » dans le calendrier donne une valeur vide : on garde le jour affiché
+  if (choixDate.value) changerJour(choixDate.value);
+  else choixDate.value = etat.jour;
 });
 /* ---------- Ouverture / fermeture des formulaires ---------- */
 

@@ -90,15 +90,32 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 }
 .fleche:active { color: var(--texte); }
 .titre-date {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   min-width: 0;
-  border: none;
-  background: none;
   padding: 2px 4px;
   text-align: left;
 }
+.ligne-semaine { display: flex; align-items: baseline; gap: 6px; max-width: 100%; }
+/* Champ date invisible qui recouvre tout le titre */
+.choix-date {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  opacity: 0;
+  font-size: 16px;            /* évite le zoom automatique de l'iPhone */
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  z-index: 1;
+}
+.choix-date:disabled { display: none; }
 .jour-semaine {
   font-size: 13px;
   font-weight: 600;
@@ -107,16 +124,38 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   color: var(--accent);
 }
 .jour-semaine.autre-jour { color: var(--texte-doux); }
-.jour-semaine .retour { color: var(--accent); }
+/* « ↩ Aujourd'hui » passe au-dessus du champ date pour rester touchable */
+.retour {
+  position: relative;
+  z-index: 2;
+  border: none;
+  background: none;
+  padding: 4px 0;
+  margin: -4px 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  white-space: nowrap;
+}
 .jour-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 26px;
   font-weight: 700;
   letter-spacing: -0.02em;
+  max-width: 100%;
+  min-width: 0;
+}
+.jour-date > span {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
 }
+.icone-calendrier { flex: none; color: var(--texte-faible); }
+#accueil.mode-bons .icone-calendrier { display: none; }
 
 .btn-icone {
   flex: 0 0 44px;
@@ -166,7 +205,6 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 }
 .compteur:empty { display: none; }
 #accueil.mode-bons .fleche { visibility: hidden; }
-#accueil.mode-bons .titre-date { cursor: default; }
 
 /* ---------- Carte du total ---------- */
 .resume {

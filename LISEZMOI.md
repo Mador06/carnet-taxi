@@ -33,7 +33,7 @@ Seul le texte tapé dans les champs adresse est envoyé à ces services. Aucun n
 ## Utilisation
 
 - **Écran d'accueil = la feuille du jour** : total du jour, détail Privé / Médical, toutes les courses triées par heure (P = privé, M = médical).
-- Flèches ‹ › : jour précédent / suivant. Toucher la date : retour à aujourd'hui.
+- Flèches ‹ › : jour précédent / suivant. Toucher la date : un calendrier s'ouvre pour choisir le jour. « ↩ Aujourd'hui » (en petit, au-dessus) : retour à aujourd'hui.
 - Toucher une course : la modifier ou la supprimer.
 - Bouton **+** : nouvelle course Privé, Médical ou **Médical donné** (la date proposée est celle du jour affiché).
 - **Médical donné** (pastille D) : course confiée à un collègue. Pas de prix, ne compte pas dans le total. ✓ Bon / ⚠ Sans bon indique si vous avez le bon de transport. Le nom et le numéro du taxi sont mémorisés et proposés la fois suivante ; « 📞 Appeler » dans le formulaire.
