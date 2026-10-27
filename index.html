@@ -27,9 +27,16 @@
   <div id="accueil">
     <header class="entete">
       <div class="nav-date">
-        <button type="button" class="fleche" id="jour-precedent" aria-label="Jour précédent">‹</button>
-        <button type="button" class="titre-date" id="titre-date" aria-label="Revenir à aujourd'hui"></button>
-        <button type="button" class="fleche" id="jour-suivant" aria-label="Jour suivant">›</button>
+        <button type="button" class="fleche" id="jour-precedent" aria-label="Jour précédent">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <button type="button" class="titre-date" id="titre-date" aria-label="Revenir à aujourd'hui">
+          <span class="jour-semaine" id="jour-semaine"></span>
+          <span class="jour-date" id="jour-date"></span>
+        </button>
+        <button type="button" class="fleche" id="jour-suivant" aria-label="Jour suivant">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
       </div>
       <button type="button" class="btn-icone" id="btn-reglages" aria-label="Réglages">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -38,17 +45,18 @@
         </svg>
       </button>
     </header>
-    <p class="sous-date" id="sous-date"></p>
-
     <main class="feuille">
       <section class="resume">
+        <div class="resume-libelle" id="resume-libelle">Total du jour</div>
         <div class="total" id="total-jour"></div>
-        <div class="detail-total" id="detail-total"></div>
+        <div class="puces" id="detail-total"></div>
       </section>
       <ul class="liste-jour" id="liste-jour"></ul>
     </main>
 
-    <button type="button" class="fab" id="btn-ajouter" aria-label="Ajouter une course">+</button>
+    <button type="button" class="fab" id="btn-ajouter" aria-label="Ajouter une course">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
   </div>
 
   <!-- ===================== FORMULAIRE PRIVÉ ===================== -->
@@ -215,13 +223,16 @@
     <h2>Nouvelle course</h2>
     <div class="choix-type">
       <button type="button" class="choix" data-nouvelle="prive">
-        <span class="choix-lettre">P</span>Privé
+        <span class="choix-lettre">P</span>
+        <span class="choix-textes"><span class="choix-nom">Privé</span><small>Station, paiement</small></span>
       </button>
       <button type="button" class="choix" data-nouvelle="medical">
-        <span class="choix-lettre choix-lettre-m">M</span>Médical
+        <span class="choix-lettre choix-lettre-m">M</span>
+        <span class="choix-textes"><span class="choix-nom">Médical</span><small>Patient, trajet, km</small></span>
       </button>
       <button type="button" class="choix choix-large" data-nouvelle="donne">
-        <span class="choix-lettre choix-lettre-d">D</span>Médical donné
+        <span class="choix-lettre choix-lettre-d">D</span>
+        <span class="choix-textes"><span class="choix-nom">Médical donné</span><small>Confié à un collègue</small></span>
       </button>
     </div>
     <button type="button" class="btn btn-fermer" data-fermer-panneau>Annuler</button>

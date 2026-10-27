@@ -30,13 +30,16 @@ function dateFr(iso) {
   return `${j}/${m}/${a}`;
 }
 
-// "2026-10-27" -> "Mardi 27 octobre" (avec l'année si ce n'est pas l'année en cours)
+// "2026-10-27" -> { semaine: "Mardi", date: "27 octobre" } (avec l'année si ce n'est pas l'année en cours)
 function titreDuJour(iso) {
   const d = dateLocale(iso);
-  const options = { weekday: 'long', day: 'numeric', month: 'long' };
+  const options = { day: 'numeric', month: 'long' };
   if (d.getFullYear() !== new Date().getFullYear()) options.year = 'numeric';
-  const texte = new Intl.DateTimeFormat('fr-FR', options).format(d);
-  return texte.charAt(0).toUpperCase() + texte.slice(1);
+  const semaine = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' }).format(d);
+  return {
+    semaine: semaine.charAt(0).toUpperCase() + semaine.slice(1),
+    date: new Intl.DateTimeFormat('fr-FR', options).format(d)
+  };
 }
 
 // "12,50" ou "12.50" -> 12.5 ; vide -> null ; texte invalide -> NaN
@@ -113,12 +116,14 @@ async function afficherFeuille() {
   ].sort((a, b) => a.heure.localeCompare(b.heure)
     || String(a.course.creeLe).localeCompare(String(b.course.creeLe)));
 
-  // Date
+  // Date : « AUJOURD'HUI · MARDI » en petit (ou « SAMEDI · ↩ AUJOURD'HUI » un autre jour), « 27 octobre » en grand
   const estAujourdhui = etat.jour === aujourdhui();
-  $('#titre-date').textContent = titreDuJour(etat.jour);
-  const sousDate = $('#sous-date');
-  sousDate.textContent = estAujourdhui ? "Aujourd'hui" : "Toucher la date pour revenir à aujourd'hui";
-  sousDate.classList.toggle('autre-jour', !estAujourdhui);
+  const titre = titreDuJour(etat.jour);
+  const semaine = $('#jour-semaine');
+  if (estAujourdhui) semaine.replaceChildren(`Aujourd'hui · ${titre.semaine}`);
+  else semaine.replaceChildren(`${titre.semaine} · `, el('span', { className: 'retour', textContent: "↩ Aujourd'hui" }));
+  semaine.classList.toggle('autre-jour', !estAujourdhui);
+  $('#jour-date').textContent = titre.date;
 
   // Totaux (les courses données à un collègue ne comptent pas)
   const somme = liste => liste.reduce((s, c) => s + (c.prix || 0), 0);
@@ -126,22 +131,36 @@ async function afficherFeuille() {
   const totalMedical = somme(medicales);
   $('#total-jour').textContent = euros(totalPrive + totalMedical);
   const nombre = prives.length + medicales.length;
-  const details = [];
-  if (nombre > 0) {
-    details.push(`Privé ${euros(totalPrive)}`, `Médical ${euros(totalMedical)}`,
-      `${nombre} course${nombre > 1 ? 's' : ''}`);
-  }
-  if (donnees.length > 0) details.push(`${donnees.length} donnée${donnees.length > 1 ? 's' : ''}`);
-  $('#detail-total').textContent = details.join(' · ');
+  $('#resume-libelle').textContent = nombre > 0
+    ? `Total du jour · ${nombre} course${nombre > 1 ? 's' : ''}`
+    : 'Total du jour';
+
+  // Petites pastilles de détail sous le total
+  const puce = (classePoint, libelle, valeur) => el('span', { className: 'puce' },
+    el('span', { className: 'point ' + classePoint }), libelle + ' ', el('strong', { textContent: valeur }));
+  const puces = [];
+  if (prives.length) puces.push(puce('', 'Privé', euros(totalPrive)));
+  if (medicales.length) puces.push(puce('point-m', 'Médical', euros(totalMedical)));
+  if (donnees.length) puces.push(puce('point-d', donnees.length > 1 ? 'Données' : 'Donnée', String(donnees.length)));
+  $('#detail-total').replaceChildren(...puces);
 
   // Liste
   const ul = $('#liste-jour');
   ul.replaceChildren();
+  ul.classList.toggle('vide', courses.length === 0);
   if (courses.length === 0) {
-    ul.append(el('li', {
-      className: 'liste-vide',
-      textContent: estAujourdhui ? "Aucune course aujourd'hui" : 'Aucune course ce jour-là'
-    }));
+    const icone = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icone.setAttribute('viewBox', '0 0 24 24');
+    icone.setAttribute('width', '44');
+    icone.setAttribute('height', '44');
+    icone.innerHTML = '<g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M5 17h14v-4.5l-1.8-4.3A2 2 0 0 0 15.4 7H8.6a2 2 0 0 0-1.8 1.2L5 12.5z"/>'
+      + '<path d="M5 12.5h14M9.5 4.5h5v2.5h-5z"/><circle cx="8" cy="17" r="1.6"/><circle cx="16" cy="17" r="1.6"/></g>';
+    ul.append(el('li', { className: 'liste-vide' },
+      icone,
+      estAujourdhui ? "Aucune course aujourd'hui" : 'Aucune course ce jour-là',
+      el('small', { textContent: 'Touchez + pour en ajouter une' })
+    ));
   }
   for (const { store, heure, course } of courses) ul.append(ligneCourse(store, heure, course));
 }
@@ -195,7 +214,6 @@ function changerJour(iso) {
 $('#jour-precedent').addEventListener('click', () => changerJour(decalerJour(etat.jour, -1)));
 $('#jour-suivant').addEventListener('click', () => changerJour(decalerJour(etat.jour, 1)));
 $('#titre-date').addEventListener('click', () => changerJour(aujourdhui()));
-
 /* ---------- Ouverture / fermeture des formulaires ---------- */
 
 // Pour chaque type de course : titre, remise à zéro et remplissage du formulaire

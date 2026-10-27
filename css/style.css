@@ -4,45 +4,62 @@
    ============================================================ */
 
 :root {
-  --fond: #0b0b0d;
-  --surface: #17181c;        /* panneaux, champs */
-  --surface-2: #202127;      /* champ actif, appui */
-  --separateur: rgba(255, 255, 255, 0.06);
-  --texte: #f2f2f4;
-  --texte-doux: #8e8e93;
+  --fond: #0a0a0c;
+  --surface: #151619;        /* cartes, champs */
+  --surface-2: #1e1f24;      /* champ actif, boutons secondaires */
+  --separateur: rgba(255, 255, 255, 0.07);
+  --texte: #f4f4f6;
+  --texte-doux: #8d8d94;
+  --texte-faible: #5d5d64;
   --accent: #f5c542;         /* jaune taxi, adouci */
+  --accent-doux: rgba(245, 197, 66, 0.14);
   --accent-texte: #17140a;
   --danger: #ff6b6b;
-  --donne: #8caae6;          /* pastille « Médical donné » */
+  --donne: #8caae6;          /* « Médical donné » */
+  --donne-doux: rgba(140, 170, 230, 0.14);
   --alerte: #f0a35e;         /* bon de transport manquant */
-  --rayon: 14px;
+  --rayon: 18px;
   --gouttiere: 20px;
+  /* Police arrondie de l'iPhone pour les chiffres (prix, heures, total) */
+  --police-chiffres: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 
-html, body {
-  margin: 0;
+html {
   background: var(--fond);
+}
+
+body {
+  margin: 0;
   color: var(--texte);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   font-size: 17px;
   line-height: 1.35;
+  -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
-}
-
-body {
   /* Zones sûres de l'iPhone : encoche en haut, barre d'accueil en bas, côtés en paysage */
   padding-top: env(safe-area-inset-top);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
 }
 
+/* Léger halo chaud en haut de l'écran */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 50% at 50% -12%, rgba(245, 197, 66, 0.10), transparent 60%),
+    radial-gradient(90% 40% at 100% 0%, rgba(140, 170, 230, 0.05), transparent 70%);
+}
+
 button { font-family: inherit; color: inherit; cursor: pointer; }
-.chiffres { font-variant-numeric: tabular-nums; }
 
 /* ============================================================
    Feuille du jour
@@ -51,110 +68,156 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 #accueil {
   max-width: 640px;
   margin: 0 auto;
-  padding: 0 var(--gouttiere) calc(120px + env(safe-area-inset-bottom));
+  padding: 0 var(--gouttiere) calc(130px + env(safe-area-inset-bottom));
 }
 
 .entete {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding-top: 14px;
+  gap: 8px;
+  padding-top: 12px;
 }
 
-.nav-date { display: flex; align-items: center; gap: 2px; margin-left: -10px; min-width: 0; }
+.nav-date { flex: 1; display: flex; align-items: center; min-width: 0; margin-left: -10px; }
 .fleche {
-  width: 40px;
+  flex: 0 0 36px;
   height: 44px;
   border: none;
   background: none;
-  color: var(--texte-doux);
-  font-size: 26px;
-  line-height: 1;
+  color: var(--texte-faible);
+  display: grid;
+  place-items: center;
 }
 .fleche:active { color: var(--texte); }
 .titre-date {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
   border: none;
   background: none;
-  padding: 6px 4px;
-  font-size: 22px;
+  padding: 2px 4px;
+  text-align: left;
+}
+.jour-semaine {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.jour-semaine.autre-jour { color: var(--texte-doux); }
+.jour-semaine .retour { color: var(--accent); }
+.jour-date {
+  font-size: 26px;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .btn-icone {
+  flex: 0 0 44px;
   width: 44px;
   height: 44px;
-  margin-right: -10px;
+  margin-right: -8px;
   border: none;
+  border-radius: 50%;
   background: none;
   color: var(--texte-doux);
   display: grid;
   place-items: center;
 }
-.btn-icone:active { color: var(--texte); }
+.btn-icone:active { background: var(--surface); color: var(--texte); }
 
-.sous-date {
-  margin: 0 0 0 30px;
-  min-height: 20px;
+/* ---------- Carte du total ---------- */
+.resume {
+  margin: 22px 0 20px;
+  padding: 20px 20px 18px;
+  border-radius: 22px;
+  background:
+    linear-gradient(160deg, rgba(245, 197, 66, 0.10), rgba(245, 197, 66, 0) 55%),
+    var(--surface);
+}
+.resume-libelle {
   font-size: 14px;
   color: var(--texte-doux);
 }
-.sous-date.autre-jour { color: var(--accent); }
-
-.resume { padding: 34px 0 26px; }
 .total {
-  font-size: 46px;
+  margin-top: 2px;
+  font-family: var(--police-chiffres);
+  font-size: 48px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1.05;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
-.detail-total {
-  margin-top: 8px;
-  font-size: 15px;
+.puces { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.puces:empty { display: none; }
+.puce {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 14px;
   color: var(--texte-doux);
+  font-family: var(--police-chiffres);
   font-variant-numeric: tabular-nums;
 }
+.puce strong { color: var(--texte); font-weight: 600; }
+.point { width: 7px; height: 7px; border-radius: 50%; background: var(--texte-doux); }
+.point-m { background: var(--accent); }
+.point-d { background: var(--donne); }
 
-/* ---------- Liste des courses ---------- */
-.liste-jour { list-style: none; margin: 0; padding: 0; }
+/* ---------- Liste des courses (carte groupée façon iPhone) ---------- */
+.liste-jour {
+  list-style: none;
+  margin: 0;
+  padding: 0 14px;
+  border-radius: var(--rayon);
+  background: var(--surface);
+}
+.liste-jour.vide { background: none; }
 .liste-jour li + li .course { border-top: 1px solid var(--separateur); }
 
 .course {
   display: grid;
-  grid-template-columns: 50px 22px 1fr auto;
+  grid-template-columns: 46px 26px 1fr auto;
   align-items: center;
   gap: 10px;
   width: 100%;
-  min-height: 64px;
+  min-height: 66px;
   padding: 12px 0;
   border: none;
   background: none;
   text-align: left;
 }
-.course:active { background: var(--surface); }
+.course:active { opacity: 0.6; }
 
 .c-heure {
+  font-family: var(--police-chiffres);
   font-size: 15px;
+  font-weight: 500;
   color: var(--texte-doux);
   font-variant-numeric: tabular-nums;
 }
 .c-type {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
   display: grid;
   place-items: center;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
-  background: var(--surface-2);
+  background: rgba(255, 255, 255, 0.07);
   color: var(--texte-doux);
 }
-.c-type-m { background: rgba(245, 197, 66, 0.16); color: var(--accent); }
-.c-type-d { background: rgba(140, 170, 230, 0.14); color: var(--donne); }
+.c-type-m { background: var(--accent-doux); color: var(--accent); }
+.c-type-d { background: var(--donne-doux); color: var(--donne); }
 .c-texte { display: flex; flex-direction: column; min-width: 0; }
 .c-titre {
   font-weight: 600;
@@ -162,23 +225,42 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.c-sous { font-size: 14px; color: var(--texte-doux); margin-top: 1px; }
+.c-sous {
+  font-size: 14px;
+  color: var(--texte-doux);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .c-prix {
+  font-family: var(--police-chiffres);
   font-size: 18px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.c-prix.vide { color: var(--texte-doux); font-weight: 400; }
+.c-prix.vide { color: var(--texte-faible); font-weight: 500; }
 /* Course donnée : pas de prix, juste l'état du bon de transport */
-.c-bon { font-size: 14px; white-space: nowrap; color: var(--texte-doux); }
-.c-bon.manque { color: var(--alerte); }
+.c-bon {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--texte-doux);
+}
+.c-bon.manque { background: rgba(240, 163, 94, 0.13); color: var(--alerte); }
 
+/* ---------- Aucune course ---------- */
 .liste-vide {
-  padding: 48px 0;
+  padding: 56px 0 24px;
   text-align: center;
   color: var(--texte-doux);
 }
+.liste-vide svg { display: block; margin: 0 auto 14px; color: var(--texte-faible); }
+.liste-vide small { display: block; margin-top: 4px; color: var(--texte-faible); font-size: 14px; }
 
 /* ---------- Bouton + flottant ---------- */
 .fab {
@@ -189,14 +271,15 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   height: 64px;
   border: none;
   border-radius: 50%;
-  background: var(--accent);
+  background: linear-gradient(180deg, #f8d064, var(--accent));
   color: var(--accent-texte);
-  font-size: 36px;
-  font-weight: 300;
-  line-height: 1;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 10px 28px rgba(245, 197, 66, 0.28), 0 2px 6px rgba(0, 0, 0, 0.4);
   z-index: 20;
+  transition: transform 0.12s;
 }
-.fab:active { transform: scale(0.94); }
+.fab:active { transform: scale(0.93); }
 
 /* ============================================================
    Écrans de formulaire (plein écran)
@@ -215,9 +298,11 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   display: grid;
   grid-template-columns: 90px 1fr 90px;
   align-items: center;
-  margin: 0 calc(-1 * var(--gouttiere)) 8px;
+  margin: 0 calc(-1 * var(--gouttiere)) 10px;
   padding: 10px var(--gouttiere);
-  background: var(--fond);
+  background: rgba(10, 10, 12, 0.78);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
 }
 .barre-ecran h2 { margin: 0; font-size: 17px; font-weight: 600; text-align: center; }
 .btn-texte {
@@ -231,30 +316,33 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 
 .formulaire label {
   display: block;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--texte-doux);
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 /* Les champs font au moins 16px : sinon l'iPhone zoome tout seul */
 input, select, textarea {
   display: block;
   width: 100%;
-  margin-top: 6px;
-  min-height: 52px;
-  padding: 12px 14px;
+  margin-top: 7px;
+  min-height: 54px;
+  padding: 13px 15px;
   font-size: 18px;
   font-family: inherit;
   color: var(--texte);
   background: var(--surface);
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: 14px;
   -webkit-appearance: none;
   appearance: none;
+  transition: border-color 0.15s, background-color 0.15s;
 }
-input:focus, select:focus { outline: none; border-color: var(--accent); background: var(--surface-2); }
-input::placeholder { color: #5c5c62; }
-input[type="date"], input[type="time"] { min-width: 0; font-variant-numeric: tabular-nums; }
+input:focus, select:focus { outline: none; border-color: rgba(245, 197, 66, 0.7); background: var(--surface-2); }
+input::placeholder { color: var(--texte-faible); }
+input[type="date"], input[type="time"] { min-width: 0; font-family: var(--police-chiffres); font-variant-numeric: tabular-nums; }
+input[inputmode="decimal"], input[type="tel"] { font-family: var(--police-chiffres); font-variant-numeric: tabular-nums; }
 /* Petite flèche pour les menus déroulants */
 select {
   background-image: linear-gradient(45deg, transparent 50%, var(--texte-doux) 50%),
@@ -273,33 +361,40 @@ select {
   min-height: 56px;
   margin-top: 12px;
   border: none;
-  border-radius: 14px;
+  border-radius: 16px;
   font-size: 18px;
   font-weight: 600;
 }
 .btn:active { opacity: 0.8; }
-.btn-principal { background: var(--accent); color: var(--accent-texte); margin-top: 20px; }
-.btn-secondaire { background: var(--surface-2); }
+.btn-principal {
+  margin-top: 22px;
+  background: linear-gradient(180deg, #f8d064, var(--accent));
+  color: var(--accent-texte);
+  box-shadow: 0 8px 22px rgba(245, 197, 66, 0.18);
+}
+.btn-secondaire { background: var(--surface-2); font-weight: 500; }
 .btn-danger { background: none; color: var(--danger); font-weight: 500; }
 .btn-fermer { background: none; color: var(--texte-doux); font-weight: 500; }
 
 /* ---------- Champs adresse et suggestions ---------- */
-.champ-adresse { position: relative; margin-bottom: 14px; }
-.champ-adresse > label { font-size: 14px; color: var(--texte-doux); }
+.champ-adresse { position: relative; margin-bottom: 16px; }
+.champ-adresse > label { font-size: 13px; font-weight: 500; color: var(--texte-doux); }
 
 .suggestions {
   list-style: none;
   margin: 6px 0 0;
-  padding: 4px;
-  background: var(--surface-2);
-  border-radius: 12px;
+  padding: 5px;
+  background: rgba(32, 33, 39, 0.96);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
   position: absolute;
   left: 0;
   right: 0;
   z-index: 20;
   max-height: 300px;
   overflow-y: auto;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
 }
 .suggestions button {
   display: flex;
@@ -308,20 +403,20 @@ select {
   width: 100%;
   text-align: left;
   min-height: 52px;
-  padding: 8px 10px;
+  padding: 9px 10px;
   border: none;
   background: transparent;
   font-size: 16px;
-  border-radius: 8px;
+  border-radius: 11px;
 }
-.suggestions button:active { background: rgba(255, 255, 255, 0.06); }
+.suggestions button:active { background: rgba(255, 255, 255, 0.07); }
 .sugg-icone { flex: 0 0 auto; font-size: 18px; line-height: 1.4; }
 .sugg-texte { display: flex; flex-direction: column; min-width: 0; }
 .sugg-texte strong { font-weight: 600; }
 .sugg-texte small { color: var(--texte-doux); font-size: 13px; margin-top: 2px; }
 .sugg-source { font-size: 12px; color: var(--texte-doux); padding: 6px 10px; }
 
-.info-km { margin: -6px 0 14px; font-size: 14px; color: var(--texte-doux); min-height: 1em; }
+.info-km { margin: -8px 0 16px; font-size: 13px; color: var(--texte-doux); min-height: 1em; }
 .info-km.erreur { color: var(--danger); }
 
 /* ---------- Case à cocher et lien d'appel ---------- */
@@ -330,11 +425,12 @@ select {
   align-items: center;
   gap: 14px;
   min-height: 56px;
-  padding: 0 14px;
-  border-radius: 12px;
+  padding: 0 15px;
+  border-radius: 14px;
   background: var(--surface);
   color: var(--texte);
   font-size: 17px;
+  font-weight: 400;
 }
 input[type="checkbox"] {
   flex: 0 0 26px;
@@ -343,7 +439,7 @@ input[type="checkbox"] {
   min-height: 0;
   margin: 0;
   padding: 0;
-  border-radius: 7px;
+  border-radius: 8px;
   border: 1.5px solid #3a3b42;
   background: var(--surface-2);
 }
@@ -353,12 +449,16 @@ input[type="checkbox"]:checked {
 }
 
 .lien-appel {
-  display: block;
-  margin: -6px 0 14px;
-  padding: 4px 0;
+  display: inline-block;
+  margin: -8px 0 16px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--accent-doux);
   color: var(--accent);
-  font-size: 16px;
+  font-size: 15px;
+  font-weight: 600;
   text-decoration: none;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ============================================================
@@ -372,24 +472,36 @@ dialog.panneau {
   margin: auto auto 0;
   padding: 10px var(--gouttiere) calc(16px + env(safe-area-inset-bottom));
   border: none;
-  border-radius: 22px 22px 0 0;
-  background: var(--surface);
+  border-radius: 26px 26px 0 0;
+  background: #141518;
   color: var(--texte);
   overflow-y: auto;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
 }
-dialog.panneau[open] { animation: monter 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); }
+dialog.panneau[open] { animation: monter 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
 dialog.panneau::before {   /* petite poignée */
   content: "";
   display: block;
-  width: 36px;
+  width: 38px;
   height: 5px;
-  margin: 0 auto 14px;
+  margin: 0 auto 16px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.16);
 }
-dialog.panneau::backdrop { background: rgba(0, 0, 0, 0.55); }
-dialog.panneau h2 { margin: 0 0 16px; font-size: 20px; }
-dialog.panneau h3 { margin: 24px 0 4px; font-size: 15px; color: var(--texte-doux); font-weight: 600; }
+dialog.panneau::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+dialog.panneau h2 { margin: 0 0 16px; font-size: 21px; letter-spacing: -0.01em; }
+dialog.panneau h3 {
+  margin: 26px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--texte-doux);
+}
 @keyframes monter {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
@@ -402,31 +514,51 @@ dialog.panneau h3 { margin: 24px 0 4px; font-size: 15px; color: var(--texte-doux
   align-items: center;
   justify-content: center;
   gap: 12px;
-  min-height: 140px;
+  min-height: 150px;
+  padding: 16px 10px;
   border: none;
-  border-radius: 18px;
+  border-radius: 20px;
   background: var(--surface-2);
-  font-size: 20px;
-  font-weight: 600;
+  text-align: center;
 }
-.choix:active { opacity: 0.8; }
+.choix:active { opacity: 0.75; }
+.choix-textes { display: flex; flex-direction: column; gap: 3px; }
+.choix-nom { font-size: 19px; font-weight: 600; }
+.choix small { font-size: 13px; color: var(--texte-doux); }
 .choix-lettre {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
   display: grid;
   place-items: center;
   font-size: 18px;
+  font-weight: 700;
   background: rgba(255, 255, 255, 0.08);
   color: var(--texte-doux);
 }
-.choix-lettre-m { background: rgba(245, 197, 66, 0.16); color: var(--accent); }
-.choix-lettre-d { background: rgba(140, 170, 230, 0.14); color: var(--donne); }
+.choix-lettre-m { background: var(--accent-doux); color: var(--accent); }
+.choix-lettre-d { background: var(--donne-doux); color: var(--donne); }
 /* « Médical donné » : sur toute la largeur, sous Privé et Médical */
-.choix-large { grid-column: 1 / -1; flex-direction: row; min-height: 84px; }
+.choix-large {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 16px;
+  min-height: 84px;
+  padding: 16px 18px;
+  text-align: left;
+}
+
+.texte-doux { color: var(--texte-doux); font-size: 14px; margin: 4px 0 4px; }
 
 /* ---------- Mes collègues taxi (réglages) ---------- */
-.liste-collegues { list-style: none; margin: 4px 0 0; padding: 0; }
+.liste-collegues {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0 14px;
+  border-radius: 16px;
+  background: var(--surface-2);
+}
 .collegue {
   display: flex;
   align-items: center;
@@ -444,27 +576,29 @@ dialog.panneau h3 { margin: 24px 0 4px; font-size: 15px; color: var(--texte-doux
   color: var(--accent);
 }
 .collegue button.supprimer { color: var(--danger); }
-.collegues-vide { color: var(--texte-doux); font-size: 14px; padding: 8px 0; }
-
-.texte-doux { color: var(--texte-doux); font-size: 14px; margin: 4px 0 4px; }
+.collegues-vide { color: var(--texte-doux); font-size: 14px; padding: 14px 0; }
 
 /* ---------- Message temporaire ---------- */
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(100px + env(safe-area-inset-bottom));
+  bottom: calc(104px + env(safe-area-inset-bottom));
   transform: translateX(-50%) translateY(10px);
-  background: #2a2b31;
+  background: rgba(44, 45, 52, 0.92);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
   color: var(--texte);
   padding: 12px 18px;
   border-radius: 999px;
   font-size: 15px;
+  font-weight: 500;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.18s, transform 0.18s;
   z-index: 40;
   max-width: calc(100vw - 40px);
   text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
-.toast.erreur { background: #4a1f1f; }
+.toast.erreur { background: rgba(90, 31, 31, 0.95); }
