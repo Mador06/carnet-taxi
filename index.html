@@ -168,6 +168,48 @@
     </form>
   </section>
 
+  <!-- ===================== FORMULAIRE MÉDICAL DONNÉ (confié à un collègue) ===================== -->
+  <section class="ecran" id="ecran-donne" hidden>
+    <div class="barre-ecran">
+      <button type="button" class="btn-texte" data-fermer-ecran>Annuler</button>
+      <h2 id="titre-form-donne">Médical donné</h2>
+      <span class="barre-espace"></span>
+    </div>
+
+    <form id="form-donne" class="formulaire" autocomplete="off">
+      <label>Nom / Prénom du patient
+        <input type="text" name="nom" autocapitalize="words" required>
+      </label>
+
+      <div class="ligne-2">
+        <label>Date
+          <input type="date" name="date" required>
+        </label>
+        <label>Heure
+          <input type="time" name="heure" required>
+        </label>
+      </div>
+
+      <div class="champ-adresse">
+        <label for="taxi-nom">Donné au taxi</label>
+        <input type="text" name="taxi" id="taxi-nom" autocapitalize="words" placeholder="Nom du collègue" required>
+      </div>
+
+      <label>Tél. du taxi
+        <input type="tel" name="telTaxi" id="taxi-tel" inputmode="tel" placeholder="06 12 34 56 78">
+      </label>
+      <a class="lien-appel" id="appel-taxi" hidden></a>
+
+      <label class="case">
+        <input type="checkbox" name="bon">
+        <span>Bon de transport : j'ai</span>
+      </label>
+
+      <button type="submit" class="btn btn-principal" id="btn-valider-donne">Ajouter la course</button>
+      <button type="button" class="btn btn-danger" id="btn-supprimer-donne" hidden>Supprimer la course</button>
+    </form>
+  </section>
+
   <!-- ===================== PANNEAU « + » ===================== -->
   <dialog class="panneau" id="panneau-ajout">
     <h2>Nouvelle course</h2>
@@ -177,6 +219,9 @@
       </button>
       <button type="button" class="choix" data-nouvelle="medical">
         <span class="choix-lettre choix-lettre-m">M</span>Médical
+      </button>
+      <button type="button" class="choix choix-large" data-nouvelle="donne">
+        <span class="choix-lettre choix-lettre-d">D</span>Médical donné
       </button>
     </div>
     <button type="button" class="btn btn-fermer" data-fermer-panneau>Annuler</button>
@@ -197,6 +242,11 @@
       <button type="button" class="btn btn-secondaire" data-csv="prive">Privé</button>
       <button type="button" class="btn btn-secondaire" data-csv="medical">Médical</button>
     </div>
+    <button type="button" class="btn btn-secondaire" data-csv="donne">Médical donné</button>
+
+    <h3>Mes collègues taxi</h3>
+    <p class="texte-doux">Mémorisés automatiquement quand vous donnez une course.</p>
+    <ul class="liste-collegues" id="liste-collegues"></ul>
 
     <button type="button" class="btn btn-fermer" data-fermer-panneau>Fermer</button>
   </dialog>

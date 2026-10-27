@@ -35,8 +35,9 @@ Seul le texte tapé dans les champs adresse est envoyé à ces services. Aucun n
 - **Écran d'accueil = la feuille du jour** : total du jour, détail Privé / Médical, toutes les courses triées par heure (P = privé, M = médical).
 - Flèches ‹ › : jour précédent / suivant. Toucher la date : retour à aujourd'hui.
 - Toucher une course : la modifier ou la supprimer.
-- Bouton **+** : nouvelle course Privé ou Médical (la date proposée est celle du jour affiché).
-- Roue dentée en haut à droite : sauvegarde, restauration, export CSV.
+- Bouton **+** : nouvelle course Privé, Médical ou **Médical donné** (la date proposée est celle du jour affiché).
+- **Médical donné** (pastille D) : course confiée à un collègue. Pas de prix, ne compte pas dans le total. ✓ Bon / ⚠ Sans bon indique si vous avez le bon de transport. Le nom et le numéro du taxi sont mémorisés et proposés la fois suivante ; « 📞 Appeler » dans le formulaire.
+- Roue dentée en haut à droite : sauvegarde, restauration, export CSV (Privé, Médical, Médical donné), **Mes collègues taxi** (modifier, supprimer).
 - Les anciennes courses médicales sans heure sont classées à l'heure où elles ont été saisies.
 
 ## Suggestions d'adresses (formulaire Médical)

@@ -13,6 +13,8 @@
   --accent: #f5c542;         /* jaune taxi, adouci */
   --accent-texte: #17140a;
   --danger: #ff6b6b;
+  --donne: #8caae6;          /* pastille « Médical donné » */
+  --alerte: #f0a35e;         /* bon de transport manquant */
   --rayon: 14px;
   --gouttiere: 20px;
   color-scheme: dark;
@@ -152,6 +154,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   color: var(--texte-doux);
 }
 .c-type-m { background: rgba(245, 197, 66, 0.16); color: var(--accent); }
+.c-type-d { background: rgba(140, 170, 230, 0.14); color: var(--donne); }
 .c-texte { display: flex; flex-direction: column; min-width: 0; }
 .c-titre {
   font-weight: 600;
@@ -167,6 +170,9 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   white-space: nowrap;
 }
 .c-prix.vide { color: var(--texte-doux); font-weight: 400; }
+/* Course donnée : pas de prix, juste l'état du bon de transport */
+.c-bon { font-size: 14px; white-space: nowrap; color: var(--texte-doux); }
+.c-bon.manque { color: var(--alerte); }
 
 .liste-vide {
   padding: 48px 0;
@@ -318,6 +324,43 @@ select {
 .info-km { margin: -6px 0 14px; font-size: 14px; color: var(--texte-doux); min-height: 1em; }
 .info-km.erreur { color: var(--danger); }
 
+/* ---------- Case à cocher et lien d'appel ---------- */
+.formulaire label.case {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 56px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--texte);
+  font-size: 17px;
+}
+input[type="checkbox"] {
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 7px;
+  border: 1.5px solid #3a3b42;
+  background: var(--surface-2);
+}
+input[type="checkbox"]:checked {
+  border-color: var(--accent);
+  background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2317140a' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 16px no-repeat;
+}
+
+.lien-appel {
+  display: block;
+  margin: -6px 0 14px;
+  padding: 4px 0;
+  color: var(--accent);
+  font-size: 16px;
+  text-decoration: none;
+}
+
 /* ============================================================
    Panneaux qui montent du bas (« + » et Réglages)
    ============================================================ */
@@ -378,6 +421,30 @@ dialog.panneau h3 { margin: 24px 0 4px; font-size: 15px; color: var(--texte-doux
   color: var(--texte-doux);
 }
 .choix-lettre-m { background: rgba(245, 197, 66, 0.16); color: var(--accent); }
+.choix-lettre-d { background: rgba(140, 170, 230, 0.14); color: var(--donne); }
+/* « Médical donné » : sur toute la largeur, sous Privé et Médical */
+.choix-large { grid-column: 1 / -1; flex-direction: row; min-height: 84px; }
+
+/* ---------- Mes collègues taxi (réglages) ---------- */
+.liste-collegues { list-style: none; margin: 4px 0 0; padding: 0; }
+.collegue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+}
+.collegue + .collegue { border-top: 1px solid var(--separateur); }
+.collegue-texte { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.collegue-texte small { color: var(--texte-doux); font-size: 14px; font-variant-numeric: tabular-nums; }
+.collegue button {
+  border: none;
+  background: none;
+  padding: 10px 6px;
+  font-size: 15px;
+  color: var(--accent);
+}
+.collegue button.supprimer { color: var(--danger); }
+.collegues-vide { color: var(--texte-doux); font-size: 14px; padding: 8px 0; }
 
 .texte-doux { color: var(--texte-doux); font-size: 14px; margin: 4px 0 4px; }
 

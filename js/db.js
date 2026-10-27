@@ -1,12 +1,16 @@
 /* ============================================================
    db.js – stockage local sur le téléphone (IndexedDB)
-   Deux "tiroirs" (stores) : "prive" et "medical".
+   "Tiroirs" (stores) :
+   - "prive", "medical", "donne" : les courses (rangées par date)
+   - "collegues" : les taxis à qui l'on donne des courses (nom + téléphone)
    Rien n'est envoyé sur Internet.
    ============================================================ */
 
 const DB_NOM = 'carnet-taxi';
-const DB_VERSION = 3;   // 2 : ajout des favoris "lieux" ; 3 : favoris retirés
-const STORES = ['prive', 'medical'];
+// 2 : favoris "lieux" ; 3 : favoris retirés ; 4 : médical donné + collègues
+const DB_VERSION = 4;
+const STORES = ['prive', 'medical', 'donne'];   // les courses
+const STORES_TOUS = [...STORES, 'collegues'];
 
 let promesseDB = null;
 
@@ -18,10 +22,10 @@ function ouvrirDB() {
       // Les tiroirs déjà existants (et leurs courses) ne sont pas touchés.
       req.onupgradeneeded = () => {
         const db = req.result;
-        for (const nom of STORES) {
+        for (const nom of STORES_TOUS) {
           if (!db.objectStoreNames.contains(nom)) {
             const store = db.createObjectStore(nom, { keyPath: 'id' });
-            store.createIndex('date', 'date');
+            if (STORES.includes(nom)) store.createIndex('date', 'date');
           }
         }
         // Ancien tiroir des favoris (version 2), qui n'existe plus
@@ -47,8 +51,8 @@ async function operation(store, mode, action) {
 }
 
 const DB = {
-  enregistrer(store, course) {
-    return operation(store, 'readwrite', s => s.put(course));
+  enregistrer(store, objet) {
+    return operation(store, 'readwrite', s => s.put(objet));
   },
   supprimer(store, id) {
     return operation(store, 'readwrite', s => s.delete(id));
@@ -65,14 +69,16 @@ const DB = {
 
   // Restauration : remplace TOUT en une seule fois.
   // Si une erreur survient, rien n'est modifié (transaction annulée).
+  // Une ancienne sauvegarde (sans "donne" ni "collegues") ne touche pas à ces tiroirs.
   async remplacerTout(donnees) {
     const db = await ouvrirDB();
+    const stores = STORES_TOUS.filter(nom => nom === 'prive' || nom === 'medical' || Array.isArray(donnees[nom]));
     return new Promise((resoudre, rejeter) => {
-      const tx = db.transaction(STORES, 'readwrite');
-      for (const nom of STORES) {
+      const tx = db.transaction(stores, 'readwrite');
+      for (const nom of stores) {
         const store = tx.objectStore(nom);
         store.clear();
-        for (const course of donnees[nom] || []) store.put(course);
+        for (const objet of donnees[nom] || []) store.put(objet);
       }
       tx.oncomplete = () => resoudre();
       tx.onerror = () => rejeter(tx.error);
