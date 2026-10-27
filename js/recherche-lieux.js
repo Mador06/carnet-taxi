@@ -1,8 +1,7 @@
 /* ============================================================
    recherche-lieux.js – recherche de lieux par leur nom
-   1. ⭐ Mes lieux (favoris, sur le téléphone)
-   2. 🏥 Établissements de santé du 06 (fichier FINESS inclus dans l'app)
-   3. 🌐 Lieux en ligne (Photon / OpenStreetMap), seulement si 1 et 2 ne trouvent rien
+   1. 🏥 Établissements de santé du 06 (fichier FINESS inclus dans l'app)
+   2. 🌐 Lieux en ligne (Photon / OpenStreetMap), seulement si 1 ne trouve rien
    Recherche tolérante : sans majuscules ni accents, mots dans le désordre,
    mots partiels ("hop past"), abréviations (CH, CHU, St, Ste…).
    ============================================================ */
@@ -160,34 +159,12 @@ function meilleurs(lieux, mots, nombre) {
     .map(r => r.lieu);
 }
 
-/* ---------- ⭐ Mes lieux (favoris) ---------- */
-
-let favoris = [];
-
-// Relit les favoris depuis le stockage (au démarrage et après chaque changement)
-async function rafraichirFavoris() {
-  const tous = await DB.tout('lieux');
-  favoris = tous.map(f => ({
-    type: 'favori',
-    id: f.id,
-    nom: f.nom,
-    detail: f.adresse,
-    adresse: f.adresse,
-    lat: f.lat,
-    lon: f.lon,
-    motsNom: motsDe(f.nom),
-    motsAutres: motsDe(f.adresse)
-  }));
-  return tous;
-}
-
-/* ---------- Recherche locale (favoris + établissements), sans réseau ---------- */
+/* ---------- Recherche locale (établissements), sans réseau ---------- */
 
 async function chercherLieuxLocaux(texte) {
   const mots = motsRecherches(texte);
   if (!mots.length) return [];
-  const etablissements = await chargerEtablissements();
-  return [...meilleurs(favoris, mots, 3), ...meilleurs(etablissements, mots, 5)];
+  return meilleurs(await chargerEtablissements(), mots, 5);
 }
 
 /* ---------- 🌐 Lieux en ligne : Photon (OpenStreetMap), sans clé ---------- */

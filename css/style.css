@@ -52,7 +52,7 @@ body {
   padding-right: max(16px, env(safe-area-inset-right));
 }
 .entete h1 { font-size: 20px; margin: 0; white-space: nowrap; }
-.boutons-entete { display: flex; gap: 8px; }
+
 .btn-entete {
   background: var(--champ);
   color: var(--texte);
@@ -206,20 +206,9 @@ input[type="date"], input[type="time"] { min-width: 0; }
 .liste-vide { color: var(--texte-doux); text-align: center; padding: 18px 0; }
 .liste li.en-edition { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
 
-/* ---------- Champs adresse + bouton ⭐ ---------- */
+/* ---------- Champs adresse ---------- */
 .champ-adresse { position: relative; margin-bottom: 12px; }
 .champ-adresse > label { font-size: 14px; color: var(--texte-doux); }
-.ligne-adresse { display: flex; gap: 8px; align-items: stretch; }
-.ligne-adresse input { flex: 1; min-width: 0; }
-.btn-etoile {
-  flex: 0 0 52px;
-  margin-top: 5px;
-  border-radius: 10px;
-  border: 1px solid var(--bordure);
-  background: var(--champ);
-  font-size: 22px;
-}
-.btn-etoile:active { background: var(--bordure); }
 
 /* ---------- Suggestions d'adresses ---------- */
 .suggestions {

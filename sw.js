@@ -2,14 +2,13 @@
    sw.js – "service worker" : permet à l'app de s'ouvrir sans réseau
    Les fichiers de l'app sont gardés en mémoire sur le téléphone.
    Stratégie : on affiche tout de suite la version en mémoire, et on
-   télécharge la nouvelle version en arrière-plan (visible au
-   lancement suivant).
+   télécharge la nouvelle version en arrière-plan.
    Les services en ligne (IGN, Photon) ne sont jamais mis en mémoire.
-   Quand on ajoute un fichier à l'app : l'ajouter ici ET changer le
-   numéro de CACHE (v2 -> v3…).
+   Quand on change un fichier de l'app : changer le numéro de CACHE
+   (v3 -> v4…) pour que les téléphones reprennent tous les fichiers.
    ============================================================ */
 
-const CACHE = 'carnet-taxi-v2';
+const CACHE = 'carnet-taxi-v3';
 const FICHIERS = [
   './',
   './index.html',
@@ -27,7 +26,10 @@ const FICHIERS = [
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FICHIERS)));
+  // cache: 'reload' = toujours prendre les fichiers frais sur le serveur,
+  // jamais une vieille copie gardée par le navigateur (GitHub Pages : 10 min)
+  event.waitUntil(caches.open(CACHE).then(cache =>
+    cache.addAll(FICHIERS.map(f => new Request(f, { cache: 'reload' })))));
   self.skipWaiting();
 });
 
@@ -42,14 +44,15 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const requete = event.request;
   if (requete.method !== 'GET') return;
-  if (new URL(requete.url).origin !== self.location.origin) return;   // IGN : réseau direct
+  if (new URL(requete.url).origin !== self.location.origin) return;   // services en ligne : réseau direct
 
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const enMemoire = await cache.match(requete, { ignoreSearch: true })
       || (requete.mode === 'navigate' ? await cache.match('./index.html') : undefined);
 
-    const depuisReseau = fetch(requete)
+    // cache: 'no-cache' = demande au serveur s'il y a plus récent
+    const depuisReseau = fetch(requete.url, { cache: 'no-cache' })
       .then(reponse => {
         if (reponse.ok) cache.put(requete, reponse.clone());
         return reponse;

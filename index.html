@@ -25,10 +25,7 @@
 
   <header class="entete">
     <h1>Carnet Taxi</h1>
-    <div class="boutons-entete">
-      <button type="button" class="btn-entete" id="btn-lieux">⭐ Mes lieux</button>
-      <button type="button" class="btn-entete" id="btn-sauvegarde">Sauvegarde</button>
-    </div>
+    <button type="button" class="btn-entete" id="btn-sauvegarde">Sauvegarde</button>
   </header>
 
   <main>
@@ -110,18 +107,12 @@
 
         <div class="champ-adresse">
           <label for="adresse-depart">Adresse client</label>
-          <div class="ligne-adresse">
-            <input type="text" name="adresseDepart" id="adresse-depart" placeholder="Adresse ou lieu (ex. hôpital Pasteur)" autocomplete="off">
-            <button type="button" class="btn-etoile" data-favori="adresse-depart" aria-label="Enregistrer dans Mes lieux">⭐</button>
-          </div>
+          <input type="text" name="adresseDepart" id="adresse-depart" placeholder="Adresse ou lieu (ex. hôpital Pasteur)" autocomplete="off">
         </div>
 
         <div class="champ-adresse">
           <label for="adresse-arrivee">Adresse d'arrivée</label>
-          <div class="ligne-adresse">
-            <input type="text" name="adresseArrivee" id="adresse-arrivee" placeholder="Adresse ou lieu (ex. hôpital Pasteur)" autocomplete="off">
-            <button type="button" class="btn-etoile" data-favori="adresse-arrivee" aria-label="Enregistrer dans Mes lieux">⭐</button>
-          </div>
+          <input type="text" name="adresseArrivee" id="adresse-arrivee" placeholder="Adresse ou lieu (ex. hôpital Pasteur)" autocomplete="off">
         </div>
 
         <div class="ligne-2">
@@ -187,13 +178,6 @@
     <button type="button" class="btn btn-fermer" id="btn-fermer-dlg">Fermer</button>
   </dialog>
 
-  <!-- Fenêtre Mes lieux (favoris) -->
-  <dialog id="dlg-lieux">
-    <h2>⭐ Mes lieux</h2>
-    <p class="texte-doux">Pour ajouter un lieu : dans l'onglet Médical, choisissez une adresse puis touchez ⭐ à côté du champ. Vos lieux apparaissent en premier dans les suggestions.</p>
-    <ul class="liste" id="liste-lieux"></ul>
-    <button type="button" class="btn btn-fermer" id="btn-fermer-lieux">Fermer</button>
-  </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 

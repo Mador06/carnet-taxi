@@ -1,14 +1,12 @@
 /* ============================================================
    db.js – stockage local sur le téléphone (IndexedDB)
-   Trois "tiroirs" (stores) : "prive", "medical" (les courses)
-   et "lieux" (les favoris ⭐).
+   Deux "tiroirs" (stores) : "prive" et "medical".
    Rien n'est envoyé sur Internet.
    ============================================================ */
 
 const DB_NOM = 'carnet-taxi';
-const DB_VERSION = 2;                          // 2 : ajout du tiroir "lieux"
-const STORES_COURSES = ['prive', 'medical'];
-const STORES = [...STORES_COURSES, 'lieux'];
+const DB_VERSION = 3;   // 2 : ajout des favoris "lieux" ; 3 : favoris retirés
+const STORES = ['prive', 'medical'];
 
 let promesseDB = null;
 
@@ -23,9 +21,11 @@ function ouvrirDB() {
         for (const nom of STORES) {
           if (!db.objectStoreNames.contains(nom)) {
             const store = db.createObjectStore(nom, { keyPath: 'id' });
-            if (STORES_COURSES.includes(nom)) store.createIndex('date', 'date');
+            store.createIndex('date', 'date');
           }
         }
+        // Ancien tiroir des favoris (version 2), qui n'existe plus
+        if (db.objectStoreNames.contains('lieux')) db.deleteObjectStore('lieux');
       };
       req.onsuccess = () => resoudre(req.result);
       req.onerror = () => rejeter(req.error);
@@ -65,13 +65,11 @@ const DB = {
 
   // Restauration : remplace TOUT en une seule fois.
   // Si une erreur survient, rien n'est modifié (transaction annulée).
-  // Une ancienne sauvegarde sans "lieux" ne touche pas aux favoris actuels.
   async remplacerTout(donnees) {
     const db = await ouvrirDB();
-    const stores = Array.isArray(donnees.lieux) ? STORES : STORES_COURSES;
     return new Promise((resoudre, rejeter) => {
-      const tx = db.transaction(stores, 'readwrite');
-      for (const nom of stores) {
+      const tx = db.transaction(STORES, 'readwrite');
+      for (const nom of STORES) {
         const store = tx.objectStore(nom);
         store.clear();
         for (const course of donnees[nom] || []) store.put(course);

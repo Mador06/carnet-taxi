@@ -3,7 +3,7 @@
    Services publics gratuits de la Géoplateforme IGN (sans clé) :
    - Géocodage (ex-Base Adresse Nationale) : data.geopf.fr/geocodage
    - Itinéraire : data.geopf.fr/navigation/itineraire
-   Les lieux par leur nom (favoris, établissements, Photon) sont
+   Les lieux par leur nom (établissements, Photon) sont
    dans recherche-lieux.js.
    Si pas de réseau : l'app continue (adresse libre, km à la main).
    ============================================================ */
@@ -67,7 +67,7 @@ async function calculerDistanceRoute(depart, arrivee) {
   }
 }
 
-const ICONES = { favori: '⭐', etablissement: '🏥', adresse: '📍', lieu: '🌐' };
+const ICONES = { etablissement: '🏥', adresse: '📍', lieu: '🌐' };
 
 // Texte écrit dans le champ quand on choisit une suggestion
 function texteDuChamp(suggestion) {
@@ -97,13 +97,7 @@ function brancherSuggestions(champ, quandChoisi) {
     numero++;
     if (controle) controle.abort();
     fermer();
-    definirAdresse(champ, {
-      label: texteDuChamp(suggestion),
-      lat: suggestion.lat,
-      lon: suggestion.lon,
-      nom: suggestion.type === 'adresse' ? '' : suggestion.nom,
-      adresse: suggestion.adresse
-    });
+    definirAdresse(champ, { label: texteDuChamp(suggestion), lat: suggestion.lat, lon: suggestion.lon });
     let coordonnees = lireCoordonnees(champ);
     // Lieu sans coordonnées : on retrouve sa position grâce à son adresse
     if (!coordonnees && suggestion.adresse) {
@@ -141,6 +135,10 @@ function brancherSuggestions(champ, quandChoisi) {
       liste.append(el('li', { className: 'sugg-source', textContent: '🌐 Lieux : © OpenStreetMap, via Photon' }));
     }
     liste.hidden = suggestions.length === 0;
+    // Une seule liste ouverte à la fois
+    if (!liste.hidden) {
+      document.querySelectorAll('.suggestions').forEach(autre => { if (autre !== liste) autre.hidden = true; });
+    }
   }
 
   champ.addEventListener('input', () => {
@@ -157,7 +155,7 @@ function brancherSuggestions(champ, quandChoisi) {
       controle = new AbortController();
       const signal = controle.signal;
 
-      // 1. Tout de suite : ⭐ favoris + 🏥 établissements (marche hors ligne)
+      // 1. Tout de suite : 🏥 établissements (marche hors ligne)
       const locaux = await chercherLieuxLocaux(texte);
       if (n !== numero) return;
       afficher(locaux, false);
@@ -178,18 +176,16 @@ function brancherSuggestions(champ, quandChoisi) {
   champ.addEventListener('blur', () => setTimeout(fermer, 150));
 }
 
-// Remplit un champ adresse et garde à côté : coordonnées, nom du lieu, adresse seule.
-// garderTexte = true : ne touche pas au texte (on efface seulement les infos cachées).
+// Remplit un champ adresse et garde ses coordonnées à côté.
+// garderTexte = true : ne touche pas au texte (on efface seulement les coordonnées).
 function definirAdresse(champ, lieu, garderTexte = false) {
   if (!garderTexte) champ.value = lieu ? lieu.label : '';
-  for (const cle of ['lat', 'lon', 'nom', 'adresse']) delete champ.dataset[cle];
-  if (!lieu) return;
-  if (lieu.lat != null && lieu.lon != null) {
+  delete champ.dataset.lat;
+  delete champ.dataset.lon;
+  if (lieu && lieu.lat != null && lieu.lon != null) {
     champ.dataset.lat = lieu.lat;
     champ.dataset.lon = lieu.lon;
   }
-  if (lieu.nom) champ.dataset.nom = lieu.nom;
-  if (lieu.adresse) champ.dataset.adresse = lieu.adresse;
 }
 
 // Coordonnées d'un champ adresse, ou null si l'adresse a été saisie librement

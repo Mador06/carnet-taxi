@@ -12,7 +12,7 @@ Application web installable sur iPhone, qui fonctionne hors ligne. Les données 
 | `js/app.js` | Le fonctionnement : ajout, modification, totaux, sauvegarde, CSV |
 | `js/db.js` | Le stockage local sur le téléphone (IndexedDB) |
 | `js/adresses.js` | Liste de suggestions, adresses et km par la route (services IGN gratuits) |
-| `js/recherche-lieux.js` | Recherche de lieux par leur nom : ⭐ favoris, 🏥 établissements, 🌐 lieux en ligne |
+| `js/recherche-lieux.js` | Recherche de lieux par leur nom : 🏥 établissements, 🌐 lieux en ligne |
 | `data/etablissements-06.json` | Les établissements de santé du 06 (tirés du fichier officiel FINESS) |
 | `js/tarif-medical.js` | **Le futur calcul du prix médical** (vide pour l'instant) |
 | `sw.js` | Le « service worker » : permet d'ouvrir l'app sans réseau |
@@ -25,20 +25,18 @@ Services externes utilisés (gratuits, sans clé, publics) :
 - Adresses : `https://data.geopf.fr/geocodage/search` (Géoplateforme IGN, remplace l'ancienne API Adresse)
 - Distance : `https://data.geopf.fr/navigation/itineraire` avec la ressource `bdtopo-valhalla`
 - Lieux en ligne (secours) : `https://photon.komoot.io/api/` (Photon, données © OpenStreetMap).
-  Utilisé seulement si ni les favoris ni les établissements ne trouvent rien, comme le demande sa règle « fair use ».
+  Utilisé seulement si aucun établissement ne correspond, comme le demande sa règle « fair use ».
   Nominatim n'est **pas** utilisé : ses règles interdisent l'autocomplétion.
 
 Seul le texte tapé dans les champs adresse est envoyé à ces services. Aucun nom ni téléphone de client n'est envoyé.
 
 ## Suggestions d'adresses (onglet Médical)
 
-Ordre d'affichage : ⭐ Mes lieux, 🏥 établissements de santé, 📍 adresses, 🌐 lieux en ligne.
+Ordre d'affichage : 🏥 établissements de santé, 📍 adresses, 🌐 lieux en ligne.
 - La recherche ignore majuscules et accents, accepte les mots dans le désordre et les débuts de mots :
   « hop pasteur », « clinique st jean », « CH cannes », « dialyse antibes ».
-- ⭐ et 🏥 marchent **sans réseau**.
-- Bouton ⭐ à côté d'un champ : enregistre l'adresse choisie dans **Mes lieux**, sous le nom de votre choix.
-  Gestion (renommer, supprimer) : bouton **⭐ Mes lieux** en haut. Les lieux sont inclus dans la sauvegarde JSON.
-- Les cabinets de radiologie privés ne sont pas dans FINESS : ils sont trouvés en ligne (🌐), et vous pouvez les mettre en ⭐.
+- 🏥 marche **sans réseau**. Taper une adresse affiche aussi les établissements situés à cette adresse.
+- Les cabinets de radiologie privés ne sont pas dans FINESS : ils sont trouvés en ligne (🌐).
 
 ### Mettre à jour la liste des établissements (tous les 2-3 mois)
 Le fichier FINESS est publié environ tous les 2 mois sur data.gouv.fr.
@@ -97,7 +95,7 @@ Sur iPhone, le mode hors ligne et l'installation ne marchent qu'avec une adresse
 4. Ouvrez-la une fois avec du réseau : ensuite elle s'ouvrira même sans réseau.
 
 ### Mettre à jour l'app plus tard
-Renvoyez les fichiers modifiés (même méthode qu'en 3c). Sur l'iPhone, la nouvelle version apparaît **au 2ᵉ lancement** de l'app (le 1ᵉʳ la télécharge en arrière-plan).
+Demandez à Claude : il modifie, teste, envoie sur GitHub et vérifie. Sur l'iPhone, l'app se recharge toute seule quand une nouvelle version arrive (sauf si une saisie est en cours : elle apparaîtra au lancement suivant).
 
 ---
 
