@@ -1,0 +1,303 @@
+/* ============================================================
+   Carnet Taxi – styles
+   Thème sombre, gros boutons, pensé pour iPhone.
+   ============================================================ */
+
+:root {
+  --fond: #111317;
+  --carte: #1c1f26;
+  --champ: #262a33;
+  --bordure: #343944;
+  --texte: #f2f3f5;
+  --texte-doux: #9aa1ad;
+  --accent: #ffc107;          /* jaune taxi */
+  --accent-texte: #1a1a1a;
+  --danger: #ff5c5c;
+  --ok: #4cd18a;
+  --rayon: 14px;
+  --hauteur-onglets: 64px;
+  color-scheme: dark;
+}
+
+/* L'onglet Médical a sa propre couleur pour ne pas se tromper d'onglet */
+body.mode-medical { --accent: #4fb3ff; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  background: var(--fond);
+  color: var(--texte);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.35;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  /* Laisse la place à l'encoche en haut et à la barre d'onglets en bas */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: calc(var(--hauteur-onglets) + env(safe-area-inset-bottom) + 16px);
+}
+
+/* ---------- En-tête ---------- */
+.entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+}
+.entete h1 { font-size: 22px; margin: 0; }
+.btn-entete {
+  background: var(--champ);
+  color: var(--texte);
+  border: 1px solid var(--bordure);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-size: 15px;
+  min-height: 44px;
+}
+
+main {
+  padding: 0 12px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* ---------- Cartes et formulaires ---------- */
+.carte {
+  background: var(--carte);
+  border-radius: var(--rayon);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.carte h2 { margin: 0 0 10px; font-size: 19px; }
+
+.formulaire label {
+  display: block;
+  font-size: 14px;
+  color: var(--texte-doux);
+  margin-bottom: 12px;
+}
+
+/* Les champs font au moins 16px : sinon l'iPhone zoome tout seul */
+input, select, textarea {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  min-height: 52px;
+  padding: 12px 14px;
+  font-size: 18px;
+  color: var(--texte);
+  background: var(--champ);
+  border: 1px solid var(--bordure);
+  border-radius: 10px;
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+}
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+/* Petite flèche pour les menus déroulants */
+select {
+  background-image: linear-gradient(45deg, transparent 50%, var(--texte-doux) 50%),
+                    linear-gradient(135deg, var(--texte-doux) 50%, transparent 50%);
+  background-position: calc(100% - 20px) 50%, calc(100% - 14px) 50%;
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 36px;
+}
+input[type="date"], input[type="time"] { min-width: 0; }
+
+.ligne-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* ---------- Boutons ---------- */
+.btn {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  margin-top: 10px;
+  border-radius: 12px;
+  border: none;
+  font-size: 18px;
+  font-weight: 600;
+  font-family: inherit;
+}
+.btn:active { transform: scale(0.98); }
+.btn-principal { background: var(--accent); color: var(--accent-texte); }
+.btn-secondaire { background: var(--champ); color: var(--texte); border: 1px solid var(--bordure); }
+.btn-fermer { background: transparent; color: var(--texte-doux); }
+.btn-csv { margin-top: 16px; font-size: 16px; min-height: 50px; }
+.actions-form { margin-top: 6px; }
+
+/* ---------- Navigation par jour ---------- */
+.nav-jour {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nav-jour .choix-jour { margin-top: 0; text-align: center; flex: 1; }
+.btn-rond {
+  flex: 0 0 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid var(--bordure);
+  background: var(--champ);
+  color: var(--texte);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.totaux {
+  margin: 14px 0 6px;
+}
+.total-jour {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.sous-totaux {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 14px;
+  color: var(--texte-doux);
+  margin-top: 4px;
+}
+
+/* ---------- Liste des courses ---------- */
+.liste { list-style: none; margin: 0; padding: 0; }
+.liste li {
+  border-top: 1px solid var(--bordure);
+  padding: 12px 0;
+}
+.course-haut {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+.course-titre { font-weight: 600; }
+.course-prix { font-weight: 700; font-size: 19px; white-space: nowrap; }
+.course-detail { color: var(--texte-doux); font-size: 14px; margin-top: 3px; overflow-wrap: anywhere; }
+.course-actions { display: flex; gap: 8px; margin-top: 8px; }
+.course-actions button {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--bordure);
+  background: var(--champ);
+  color: var(--texte);
+  font-size: 15px;
+}
+.course-actions .supprimer { color: var(--danger); }
+.liste-vide { color: var(--texte-doux); text-align: center; padding: 18px 0; }
+.liste li.en-edition { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
+
+/* ---------- Suggestions d'adresses ---------- */
+.champ-adresse { position: relative; }
+.suggestions {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 4px;
+  background: var(--champ);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 290px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.suggestions button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  min-height: 48px;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  color: var(--texte);
+  font-size: 16px;
+  border-radius: 8px;
+  font-family: inherit;
+}
+.suggestions button:active { background: var(--bordure); }
+
+.info-km {
+  margin: -4px 0 12px;
+  font-size: 14px;
+  color: var(--texte-doux);
+  min-height: 1em;
+}
+.info-km.erreur { color: var(--danger); }
+
+/* ---------- Barre d'onglets ---------- */
+.barre-onglets {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  background: #0b0c0f;
+  border-top: 1px solid var(--bordure);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 30;
+}
+.onglet-btn {
+  flex: 1;
+  height: var(--hauteur-onglets);
+  border: none;
+  background: transparent;
+  color: var(--texte-doux);
+  font-size: 18px;
+  font-weight: 600;
+  font-family: inherit;
+}
+.onglet-btn.actif { color: var(--accent); box-shadow: inset 0 3px 0 var(--accent); }
+
+/* ---------- Fenêtre Sauvegarde ---------- */
+dialog {
+  width: min(92vw, 480px);
+  background: var(--carte);
+  color: var(--texte);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  padding: 18px;
+}
+dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
+dialog h2 { margin-top: 0; }
+.texte-doux { color: var(--texte-doux); font-size: 15px; }
+
+/* ---------- Message temporaire ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--hauteur-onglets) + env(safe-area-inset-bottom) + 14px);
+  transform: translateX(-50%) translateY(20px);
+  background: #2e3440;
+  color: var(--texte);
+  padding: 12px 18px;
+  border-radius: 999px;
+  font-size: 15px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 40;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+}
+.toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.erreur { background: #5a1f1f; }

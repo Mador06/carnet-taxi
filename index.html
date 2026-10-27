@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <!-- viewport-fit=cover : l'app utilise tout l'écran de l'iPhone (encoche comprise) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Carnet Taxi</title>
+  <meta name="description" content="Carnet de bord taxi – Cannes">
+  <meta name="theme-color" content="#111317">
+  <meta name="color-scheme" content="dark">
+
+  <!-- Balises spécifiques iPhone (Safari > Sur l'écran d'accueil) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Carnet Taxi">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <header class="entete">
+    <h1>Carnet Taxi</h1>
+    <button type="button" class="btn-entete" id="btn-sauvegarde">Sauvegarde</button>
+  </header>
+
+  <main>
+    <!-- ===================== ONGLET PRIVÉ ===================== -->
+    <section id="onglet-prive" class="onglet" data-onglet="prive">
+      <form id="form-prive" class="carte formulaire" autocomplete="off">
+        <h2 id="titre-form-prive">Nouvelle course</h2>
+
+        <div class="ligne-2">
+          <label>Date
+            <input type="date" name="date" required>
+          </label>
+          <label>Heure
+            <input type="time" name="heure" required>
+          </label>
+        </div>
+
+        <label>Station
+          <select name="station" required>
+            <option>Gare</option>
+            <option>Mairie</option>
+            <option>Palais</option>
+            <option>Majestic</option>
+            <option>Marriott</option>
+            <option>Carlton</option>
+            <option>Martinez</option>
+            <option>Palm Beach</option>
+            <option>Baoli</option>
+          </select>
+        </label>
+
+        <div class="ligne-2">
+          <label>Prix (€)
+            <input type="text" name="prix" inputmode="decimal" placeholder="0,00" required>
+          </label>
+          <label>Paiement
+            <select name="paiement" required>
+              <option>Espèces</option>
+              <option>Carte</option>
+              <option>Carte+</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="actions-form">
+          <button type="submit" class="btn btn-principal" id="btn-valider-prive">Ajouter la course</button>
+          <button type="button" class="btn btn-secondaire" id="btn-annuler-prive" hidden>Annuler la modification</button>
+        </div>
+      </form>
+
+      <div class="carte">
+        <div class="nav-jour">
+          <button type="button" class="btn-rond" data-jour="-1" aria-label="Jour précédent">‹</button>
+          <input type="date" class="choix-jour" aria-label="Jour affiché">
+          <button type="button" class="btn-rond" data-jour="1" aria-label="Jour suivant">›</button>
+        </div>
+        <div class="totaux" id="totaux-prive"></div>
+        <ul class="liste" id="liste-prive"></ul>
+        <button type="button" class="btn btn-secondaire btn-csv" data-csv="prive">Exporter l'onglet Privé (CSV)</button>
+      </div>
+    </section>
+
+    <!-- ===================== ONGLET MÉDICAL ===================== -->
+    <section id="onglet-medical" class="onglet" data-onglet="medical" hidden>
+      <form id="form-medical" class="carte formulaire" autocomplete="off">
+        <h2 id="titre-form-medical">Nouvelle course médicale</h2>
+
+        <label>Date
+          <input type="date" name="date" required>
+        </label>
+
+        <label>Nom / Prénom
+          <input type="text" name="nom" autocapitalize="words" required>
+        </label>
+
+        <label>Téléphone
+          <input type="tel" name="telephone" inputmode="tel" placeholder="06 12 34 56 78">
+        </label>
+
+        <label class="champ-adresse">Adresse client
+          <input type="text" name="adresseDepart" id="adresse-depart" placeholder="Tapez une adresse…" autocomplete="off">
+        </label>
+
+        <label class="champ-adresse">Adresse d'arrivée
+          <input type="text" name="adresseArrivee" id="adresse-arrivee" placeholder="Tapez une adresse…" autocomplete="off">
+        </label>
+
+        <div class="ligne-2">
+          <label>Trajet
+            <select name="trajet">
+              <option>Aller</option>
+              <option>Aller/Retour</option>
+              <option>Retour</option>
+            </select>
+          </label>
+          <label>Km (un trajet)
+            <input type="text" name="km" inputmode="decimal" placeholder="0">
+          </label>
+        </div>
+        <p class="info-km" id="info-km"></p>
+
+        <div class="ligne-2">
+          <label>Prise en charge
+            <select name="priseEnCharge">
+              <option>Consultation</option>
+              <option>HDJ</option>
+            </select>
+          </label>
+          <label>Prix (€)
+            <input type="text" name="prix" inputmode="decimal" placeholder="0,00">
+          </label>
+        </div>
+
+        <div class="actions-form">
+          <button type="submit" class="btn btn-principal" id="btn-valider-medical">Ajouter la course</button>
+          <button type="button" class="btn btn-secondaire" id="btn-annuler-medical" hidden>Annuler la modification</button>
+        </div>
+      </form>
+
+      <div class="carte">
+        <div class="nav-jour">
+          <button type="button" class="btn-rond" data-jour="-1" aria-label="Jour précédent">‹</button>
+          <input type="date" class="choix-jour" aria-label="Jour affiché">
+          <button type="button" class="btn-rond" data-jour="1" aria-label="Jour suivant">›</button>
+        </div>
+        <div class="totaux" id="totaux-medical"></div>
+        <ul class="liste" id="liste-medical"></ul>
+        <button type="button" class="btn btn-secondaire btn-csv" data-csv="medical">Exporter l'onglet Médical (CSV)</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Barre d'onglets en bas de l'écran -->
+  <nav class="barre-onglets">
+    <button type="button" class="onglet-btn actif" data-cible="prive">Privé</button>
+    <button type="button" class="onglet-btn" data-cible="medical">Médical</button>
+  </nav>
+
+  <!-- Fenêtre Sauvegarde -->
+  <dialog id="dlg-sauvegarde">
+    <h2>Sauvegarde</h2>
+    <p class="texte-doux">Vos données restent uniquement sur ce téléphone. Faites une sauvegarde régulièrement (par exemple chaque semaine) et rangez le fichier dans « Fichiers » ou iCloud.</p>
+    <button type="button" class="btn btn-principal" id="btn-export-json">Exporter toutes les données (JSON)</button>
+    <button type="button" class="btn btn-secondaire" id="btn-import-json">Restaurer depuis un fichier…</button>
+    <input type="file" id="fichier-import" accept=".json,application/json" hidden>
+    <button type="button" class="btn btn-secondaire" data-csv="prive">Exporter Privé (CSV)</button>
+    <button type="button" class="btn btn-secondaire" data-csv="medical">Exporter Médical (CSV)</button>
+    <button type="button" class="btn btn-fermer" id="btn-fermer-dlg">Fermer</button>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/db.js"></script>
+  <script src="js/adresses.js"></script>
+  <script src="js/tarif-medical.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
