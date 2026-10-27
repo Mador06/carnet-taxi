@@ -4,18 +4,22 @@
    Stratégie : on affiche tout de suite la version en mémoire, et on
    télécharge la nouvelle version en arrière-plan (visible au
    lancement suivant).
-   Les services d'adresses / d'itinéraire (IGN) ne sont jamais mis en mémoire.
+   Les services en ligne (IGN, Photon) ne sont jamais mis en mémoire.
+   Quand on ajoute un fichier à l'app : l'ajouter ici ET changer le
+   numéro de CACHE (v2 -> v3…).
    ============================================================ */
 
-const CACHE = 'carnet-taxi-v1';
+const CACHE = 'carnet-taxi-v2';
 const FICHIERS = [
   './',
   './index.html',
   './css/style.css',
   './js/db.js',
+  './js/recherche-lieux.js',
   './js/adresses.js',
   './js/tarif-medical.js',
   './js/app.js',
+  './data/etablissements-06.json',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',

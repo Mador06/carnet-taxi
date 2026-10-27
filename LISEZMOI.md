@@ -11,18 +11,42 @@ Application web installable sur iPhone, qui fonctionne hors ligne. Les données 
 | `css/style.css` | L'apparence (thème sombre, gros boutons) |
 | `js/app.js` | Le fonctionnement : ajout, modification, totaux, sauvegarde, CSV |
 | `js/db.js` | Le stockage local sur le téléphone (IndexedDB) |
-| `js/adresses.js` | Suggestions d'adresses et km par la route (services IGN gratuits) |
+| `js/adresses.js` | Liste de suggestions, adresses et km par la route (services IGN gratuits) |
+| `js/recherche-lieux.js` | Recherche de lieux par leur nom : ⭐ favoris, 🏥 établissements, 🌐 lieux en ligne |
+| `data/etablissements-06.json` | Les établissements de santé du 06 (tirés du fichier officiel FINESS) |
 | `js/tarif-medical.js` | **Le futur calcul du prix médical** (vide pour l'instant) |
 | `sw.js` | Le « service worker » : permet d'ouvrir l'app sans réseau |
 | `manifest.json` | La carte d'identité de l'app (nom, icône, plein écran) |
 | `icons/` | Les icônes |
 | `serveur.ps1` + `lancer-serveur.bat` | Petit serveur pour tester sur le PC (rien à installer) |
+| `outils/maj-etablissements.ps1` + `mettre-a-jour-etablissements.bat` | Met à jour la liste des établissements |
 
 Services externes utilisés (gratuits, sans clé, publics) :
 - Adresses : `https://data.geopf.fr/geocodage/search` (Géoplateforme IGN, remplace l'ancienne API Adresse)
 - Distance : `https://data.geopf.fr/navigation/itineraire` avec la ressource `bdtopo-valhalla`
+- Lieux en ligne (secours) : `https://photon.komoot.io/api/` (Photon, données © OpenStreetMap).
+  Utilisé seulement si ni les favoris ni les établissements ne trouvent rien, comme le demande sa règle « fair use ».
+  Nominatim n'est **pas** utilisé : ses règles interdisent l'autocomplétion.
 
-Seule l'adresse tapée est envoyée à l'IGN pour obtenir les suggestions. Aucun nom ni téléphone n'est envoyé.
+Seul le texte tapé dans les champs adresse est envoyé à ces services. Aucun nom ni téléphone de client n'est envoyé.
+
+## Suggestions d'adresses (onglet Médical)
+
+Ordre d'affichage : ⭐ Mes lieux, 🏥 établissements de santé, 📍 adresses, 🌐 lieux en ligne.
+- La recherche ignore majuscules et accents, accepte les mots dans le désordre et les débuts de mots :
+  « hop pasteur », « clinique st jean », « CH cannes », « dialyse antibes ».
+- ⭐ et 🏥 marchent **sans réseau**.
+- Bouton ⭐ à côté d'un champ : enregistre l'adresse choisie dans **Mes lieux**, sous le nom de votre choix.
+  Gestion (renommer, supprimer) : bouton **⭐ Mes lieux** en haut. Les lieux sont inclus dans la sauvegarde JSON.
+- Les cabinets de radiologie privés ne sont pas dans FINESS : ils sont trouvés en ligne (🌐), et vous pouvez les mettre en ⭐.
+
+### Mettre à jour la liste des établissements (tous les 2-3 mois)
+Le fichier FINESS est publié environ tous les 2 mois sur data.gouv.fr.
+1. Double-cliquez sur **`mettre-a-jour-etablissements.bat`** (environ 10 secondes, 50 Mo téléchargés).
+2. Renvoyez le fichier `data/etablissements-06.json` sur GitHub.
+
+Pour garder d'autres catégories (ex. pharmacies), ajoutez leur code dans la liste `$categories`
+en haut de `outils/maj-etablissements.ps1`.
 
 ---
 

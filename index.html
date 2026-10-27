@@ -25,7 +25,10 @@
 
   <header class="entete">
     <h1>Carnet Taxi</h1>
-    <button type="button" class="btn-entete" id="btn-sauvegarde">Sauvegarde</button>
+    <div class="boutons-entete">
+      <button type="button" class="btn-entete" id="btn-lieux">⭐ Mes lieux</button>
+      <button type="button" class="btn-entete" id="btn-sauvegarde">Sauvegarde</button>
+    </div>
   </header>
 
   <main>
@@ -105,13 +108,21 @@
           <input type="tel" name="telephone" inputmode="tel" placeholder="06 12 34 56 78">
         </label>
 
-        <label class="champ-adresse">Adresse client
-          <input type="text" name="adresseDepart" id="adresse-depart" placeholder="Tapez une adresse…" autocomplete="off">
-        </label>
+        <div class="champ-adresse">
+          <label for="adresse-depart">Adresse client</label>
+          <div class="ligne-adresse">
+            <input type="text" name="adresseDepart" id="adresse-depart" placeholder="Adresse ou lieu (ex. hôpital Pasteur)" autocomplete="off">
+            <button type="button" class="btn-etoile" data-favori="adresse-depart" aria-label="Enregistrer dans Mes lieux">⭐</button>
+          </div>
+        </div>
 
-        <label class="champ-adresse">Adresse d'arrivée
-          <input type="text" name="adresseArrivee" id="adresse-arrivee" placeholder="Tapez une adresse…" autocomplete="off">
-        </label>
+        <div class="champ-adresse">
+          <label for="adresse-arrivee">Adresse d'arrivée</label>
+          <div class="ligne-adresse">
+            <input type="text" name="adresseArrivee" id="adresse-arrivee" placeholder="Adresse ou lieu (ex. hôpital Pasteur)" autocomplete="off">
+            <button type="button" class="btn-etoile" data-favori="adresse-arrivee" aria-label="Enregistrer dans Mes lieux">⭐</button>
+          </div>
+        </div>
 
         <div class="ligne-2">
           <label>Trajet
@@ -176,9 +187,18 @@
     <button type="button" class="btn btn-fermer" id="btn-fermer-dlg">Fermer</button>
   </dialog>
 
+  <!-- Fenêtre Mes lieux (favoris) -->
+  <dialog id="dlg-lieux">
+    <h2>⭐ Mes lieux</h2>
+    <p class="texte-doux">Pour ajouter un lieu : dans l'onglet Médical, choisissez une adresse puis touchez ⭐ à côté du champ. Vos lieux apparaissent en premier dans les suggestions.</p>
+    <ul class="liste" id="liste-lieux"></ul>
+    <button type="button" class="btn btn-fermer" id="btn-fermer-lieux">Fermer</button>
+  </dialog>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="js/db.js"></script>
+  <script src="js/recherche-lieux.js"></script>
   <script src="js/adresses.js"></script>
   <script src="js/tarif-medical.js"></script>
   <script src="js/app.js"></script>

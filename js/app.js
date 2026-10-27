@@ -464,10 +464,11 @@ async function partagerFichier(nom, contenu, type) {
 async function exporterJSON() {
   const donnees = {
     application: 'carnet-taxi',
-    version: 1,
+    version: 2,
     exporteLe: new Date().toISOString(),
     prive: await DB.tout('prive'),
-    medical: await DB.tout('medical')
+    medical: await DB.tout('medical'),
+    lieux: await DB.tout('lieux')
   };
   await partagerFichier(`carnet-taxi-sauvegarde-${aujourdhui()}.json`,
     JSON.stringify(donnees, null, 2), 'application/json');
@@ -482,19 +483,25 @@ async function importerJSON(fichier) {
     return;
   }
   const estCourse = c => c && typeof c.id === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(c.date);
+  const estLieu = l => l && typeof l.id === 'string' && typeof l.nom === 'string' && typeof l.adresse === 'string';
   if (!donnees || !Array.isArray(donnees.prive) || !Array.isArray(donnees.medical)
-      || ![...donnees.prive, ...donnees.medical].every(estCourse)) {
+      || ![...donnees.prive, ...donnees.medical].every(estCourse)
+      || (donnees.lieux !== undefined && (!Array.isArray(donnees.lieux) || !donnees.lieux.every(estLieu)))) {
     message("Ce fichier n'est pas une sauvegarde Carnet Taxi", true);
     return;
   }
   const ok = confirm(
     `Restaurer cette sauvegarde ?\n\n` +
-    `${donnees.prive.length} course(s) privée(s) et ${donnees.medical.length} course(s) médicale(s).\n\n` +
-    `ATTENTION : les données actuellement sur ce téléphone seront remplacées.`
+    `${donnees.prive.length} course(s) privée(s) et ${donnees.medical.length} course(s) médicale(s)` +
+    (Array.isArray(donnees.lieux)
+      ? `, ${donnees.lieux.length} lieu(x) favori(s).`
+      : `.\n(Ancienne sauvegarde : vos lieux favoris actuels sont conservés.)`) +
+    `\n\nATTENTION : les données actuellement sur ce téléphone seront remplacées.`
   );
   if (!ok) return;
   try {
     await DB.remplacerTout(donnees);
+    await rafraichirFavoris();
     reinitFormPrive();
     reinitFormMedical();
     await Promise.all([afficherListe('prive'), afficherListe('medical')]);
@@ -542,6 +549,79 @@ async function exporterCSV(store) {
   await partagerFichier(`carnet-taxi-${store}-${aujourdhui()}.csv`, csv, 'text/csv');
 }
 
+/* ---------- ⭐ Mes lieux (favoris) ---------- */
+
+async function enregistrerFavori(champ) {
+  const texte = champ.value.trim();
+  if (!texte) {
+    message("Choisissez d'abord une adresse", true);
+    champ.focus();
+    return;
+  }
+  // Adresse seule (sans le nom du lieu), et nom proposé si on a choisi un établissement
+  const adresse = champ.dataset.adresse || texte;
+  const nom = prompt('Nom de ce lieu (ex. Cabinet Dr Martin) :', champ.dataset.nom || '');
+  if (nom === null) return;               // annulé
+  if (!nom.trim()) { message('Il faut un nom', true); return; }
+
+  const existants = await DB.tout('lieux');
+  if (existants.some(l => l.nom === nom.trim() && l.adresse === adresse)) {
+    message('Ce lieu est déjà dans Mes lieux');
+    return;
+  }
+  const coordonnees = lireCoordonnees(champ);
+  await DB.enregistrer('lieux', {
+    id: nouvelId(),
+    nom: nom.trim(),
+    adresse,
+    lat: coordonnees ? coordonnees.lat : null,
+    lon: coordonnees ? coordonnees.lon : null,
+    creeLe: new Date().toISOString()
+  });
+  await rafraichirFavoris();
+  message(`⭐ « ${nom.trim()} » ajouté à Mes lieux`);
+}
+
+async function afficherMesLieux() {
+  const lieux = (await rafraichirFavoris()).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+  const ul = $('#liste-lieux');
+  ul.replaceChildren();
+  if (lieux.length === 0) {
+    ul.append(el('li', { className: 'liste-vide', textContent: 'Aucun lieu enregistré pour le moment.' }));
+  }
+  for (const lieu of lieux) {
+    const renommer = el('button', { type: 'button', textContent: 'Renommer' });
+    renommer.addEventListener('click', async () => {
+      const nom = prompt('Nouveau nom :', lieu.nom);
+      if (nom === null || !nom.trim()) return;
+      await DB.enregistrer('lieux', { ...lieu, nom: nom.trim() });
+      afficherMesLieux();
+    });
+    const supprimer = el('button', { type: 'button', className: 'supprimer', textContent: 'Supprimer' });
+    supprimer.addEventListener('click', async () => {
+      if (!confirm(`Supprimer « ${lieu.nom} » de Mes lieux ?`)) return;
+      await DB.supprimer('lieux', lieu.id);
+      afficherMesLieux();
+    });
+    ul.append(el('li', {},
+      el('div', { className: 'course-titre', textContent: '⭐ ' + lieu.nom }),
+      el('div', { className: 'course-detail', textContent: lieu.adresse }),
+      el('div', { className: 'course-actions' }, renommer, supprimer)
+    ));
+  }
+}
+
+document.querySelectorAll('[data-favori]').forEach(bouton =>
+  bouton.addEventListener('click', () =>
+    enregistrerFavori(document.getElementById(bouton.dataset.favori)).catch(e => message(e.message, true))));
+
+const fenetreLieux = $('#dlg-lieux');
+$('#btn-lieux').addEventListener('click', async () => {
+  await afficherMesLieux();
+  fenetreLieux.showModal();
+});
+$('#btn-fermer-lieux').addEventListener('click', () => fenetreLieux.close());
+
 /* ---------- Branchements des boutons ---------- */
 
 document.querySelectorAll('.onglet-btn').forEach(b =>
@@ -567,7 +647,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   const jour = aujourdhui();
   if (jour !== jourConnu) {
-    for (const store of STORES) {
+    for (const store of STORES_COURSES) {
       if (etat.jour[store] === jourConnu) allerAuJour(store, jour);
       const form = store === 'prive' ? formPrive : formMedical;
       if (!etat.edition[store] && form.elements.date.value === jourConnu) form.elements.date.value = jour;
@@ -590,7 +670,8 @@ async function demarrer() {
   changerOnglet(onglet === 'medical' ? 'medical' : 'prive');
   reinitFormPrive();
   reinitFormMedical();
-  await Promise.all([afficherListe('prive'), afficherListe('medical')]);
+  await Promise.all([afficherListe('prive'), afficherListe('medical'), rafraichirFavoris()]);
+  chargerEtablissements();   // prépare la liste des établissements à l'avance
 
   // Demande au navigateur de ne pas effacer nos données s'il manque de place
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});

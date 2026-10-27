@@ -51,15 +51,17 @@ body {
   padding-left: max(16px, env(safe-area-inset-left));
   padding-right: max(16px, env(safe-area-inset-right));
 }
-.entete h1 { font-size: 22px; margin: 0; }
+.entete h1 { font-size: 20px; margin: 0; white-space: nowrap; }
+.boutons-entete { display: flex; gap: 8px; }
 .btn-entete {
   background: var(--champ);
   color: var(--texte);
   border: 1px solid var(--bordure);
   border-radius: 999px;
-  padding: 10px 16px;
-  font-size: 15px;
+  padding: 8px 11px;
+  font-size: 14px;
   min-height: 44px;
+  white-space: nowrap;
 }
 
 main {
@@ -204,8 +206,22 @@ input[type="date"], input[type="time"] { min-width: 0; }
 .liste-vide { color: var(--texte-doux); text-align: center; padding: 18px 0; }
 .liste li.en-edition { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
 
+/* ---------- Champs adresse + bouton ⭐ ---------- */
+.champ-adresse { position: relative; margin-bottom: 12px; }
+.champ-adresse > label { font-size: 14px; color: var(--texte-doux); }
+.ligne-adresse { display: flex; gap: 8px; align-items: stretch; }
+.ligne-adresse input { flex: 1; min-width: 0; }
+.btn-etoile {
+  flex: 0 0 52px;
+  margin-top: 5px;
+  border-radius: 10px;
+  border: 1px solid var(--bordure);
+  background: var(--champ);
+  font-size: 22px;
+}
+.btn-etoile:active { background: var(--bordure); }
+
 /* ---------- Suggestions d'adresses ---------- */
-.champ-adresse { position: relative; }
 .suggestions {
   list-style: none;
   margin: 4px 0 0;
@@ -222,11 +238,13 @@ input[type="date"], input[type="time"] { min-width: 0; }
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 .suggestions button {
-  display: block;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
   width: 100%;
   text-align: left;
-  min-height: 48px;
-  padding: 10px;
+  min-height: 52px;
+  padding: 8px 10px;
   border: none;
   background: transparent;
   color: var(--texte);
@@ -235,6 +253,11 @@ input[type="date"], input[type="time"] { min-width: 0; }
   font-family: inherit;
 }
 .suggestions button:active { background: var(--bordure); }
+.sugg-icone { flex: 0 0 auto; font-size: 18px; line-height: 1.4; }
+.sugg-texte { display: flex; flex-direction: column; min-width: 0; }
+.sugg-texte strong { font-weight: 650; }
+.sugg-texte small { color: var(--texte-doux); font-size: 13px; margin-top: 2px; }
+.sugg-source { font-size: 12px; color: var(--texte-doux); padding: 6px 10px; }
 
 .info-km {
   margin: -4px 0 12px;
