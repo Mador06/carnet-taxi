@@ -39,6 +39,8 @@ Seul le texte tapé dans les champs adresse est envoyé à ces services. Aucun n
 - **Médical donné** (pastille D) : course confiée à un collègue. Pas de prix, ne compte pas dans le total. ✓ Bon / ⚠ Sans bon indique si vous avez le bon de transport. Le nom et le numéro du taxi sont mémorisés et proposés la fois suivante ; « 📞 Appeler » dans le formulaire.
 - Roue dentée en haut à droite : sauvegarde, restauration, export CSV (Privé, Médical, Médical donné), **Mes collègues taxi** (modifier, supprimer).
 - Les anciennes courses médicales sans heure sont classées à l'heure où elles ont été saisies.
+- **Bon de transport (Médical)** : case « J'ai » ; si elle n'est pas cochée, un champ « Nom du taxi » apparaît à côté (collègues proposés). Sur la feuille : « ⚠ Sans bon » ou « ⚠ Bon : nom du taxi ». Les anciennes courses médicales, sans cette case, comptent comme « sans bon » jusqu'à ce qu'on la coche.
+- **Filtre ⚠ Bons manquants** (en haut de la feuille) : toutes les courses Médical et Médical donné sans bon, tous jours confondus, groupées par date. Toucher les pastilles Médical / Donné pour n'afficher qu'un type. Le chiffre orange = nombre de bons à récupérer.
 
 ## Suggestions d'adresses (formulaire Médical)
 

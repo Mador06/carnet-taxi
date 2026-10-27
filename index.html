@@ -45,6 +45,12 @@
         </svg>
       </button>
     </header>
+    <!-- Filtre : la journée, ou toutes les courses sans bon de transport -->
+    <div class="segments" role="group" aria-label="Affichage">
+      <button type="button" class="segment actif" data-filtre="jour">Journée</button>
+      <button type="button" class="segment" data-filtre="sansbon">⚠ Bons manquants <span class="compteur" id="compteur-bons"></span></button>
+    </div>
+
     <main class="feuille">
       <section class="resume">
         <div class="resume-libelle" id="resume-libelle">Total du jour</div>
@@ -169,6 +175,20 @@
         <label>Prix (€)
           <input type="text" name="prix" inputmode="decimal" placeholder="0,00">
         </label>
+      </div>
+
+      <!-- Bon de transport : si je ne l'ai pas, le nom du taxi qui l'a -->
+      <div class="bloc-bon">
+        <span class="etiquette">Bon de transport</span>
+        <div class="ligne-bon">
+          <label class="case case-compacte">
+            <input type="checkbox" name="bon" id="bon-medical">
+            <span>J'ai</span>
+          </label>
+          <div class="champ-adresse champ-taxi-bon" id="bloc-taxi-bon">
+            <input type="text" name="taxiBon" id="taxi-bon" autocapitalize="words" placeholder="Nom du taxi" aria-label="Nom du taxi">
+          </div>
+        </div>
       </div>
 
       <button type="submit" class="btn btn-principal" id="btn-valider-medical">Ajouter la course</button>

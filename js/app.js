@@ -90,6 +90,8 @@ function heureMedical(course) {
 
 const etat = {
   jour: aujourdhui(),                       // jour affiché sur la feuille
+  filtre: 'jour',                           // 'jour' (la journée) ou 'sansbon' (bons manquants, tous les jours)
+  typesSansBon: { medical: true, donne: true },          // types affichés dans « Bons manquants »
   ecran: null,                              // formulaire ouvert : 'prive', 'medical', 'donne' ou null
   edition: { prive: null, medical: null, donne: null }   // id de la course en cours de modification
 };
@@ -103,7 +105,39 @@ const infoKm = $('#info-km');
 
 /* ---------- Feuille du jour ---------- */
 
+// Petite icône de taxi pour les listes vides
+function iconeTaxi() {
+  const icone = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  icone.setAttribute('viewBox', '0 0 24 24');
+  icone.setAttribute('width', '44');
+  icone.setAttribute('height', '44');
+  icone.innerHTML = '<g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'
+    + '<path d="M5 17h14v-4.5l-1.8-4.3A2 2 0 0 0 15.4 7H8.6a2 2 0 0 0-1.8 1.2L5 12.5z"/>'
+    + '<path d="M5 12.5h14M9.5 4.5h5v2.5h-5z"/><circle cx="8" cy="17" r="1.6"/><circle cx="16" cy="17" r="1.6"/></g>';
+  return icone;
+}
+
+// Courses médicales et données sans bon de transport (tous les jours)
+async function coursesSansBon() {
+  const [medicales, donnees] = await Promise.all([DB.tout('medical'), DB.tout('donne')]);
+  return {
+    medical: medicales.filter(c => !c.bon),
+    donne: donnees.filter(c => !c.bon)
+  };
+}
+
+// Affiche la feuille selon le filtre choisi, et met à jour le compteur des bons manquants
 async function afficherFeuille() {
+  const sansBon = await coursesSansBon();
+  const nombreSansBon = sansBon.medical.length + sansBon.donne.length;
+  $('#compteur-bons').textContent = nombreSansBon > 0 ? String(nombreSansBon) : '';
+  document.querySelectorAll('[data-filtre]').forEach(b => b.classList.toggle('actif', b.dataset.filtre === etat.filtre));
+  $('#accueil').classList.toggle('mode-bons', etat.filtre === 'sansbon');
+  if (etat.filtre === 'sansbon') return afficherBonsManquants(sansBon);
+  return afficherJournee();
+}
+
+async function afficherJournee() {
   const [prives, medicales, donnees] = await Promise.all([
     DB.parDate('prive', etat.jour),
     DB.parDate('medical', etat.jour),
@@ -149,21 +183,74 @@ async function afficherFeuille() {
   ul.replaceChildren();
   ul.classList.toggle('vide', courses.length === 0);
   if (courses.length === 0) {
-    const icone = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    icone.setAttribute('viewBox', '0 0 24 24');
-    icone.setAttribute('width', '44');
-    icone.setAttribute('height', '44');
-    icone.innerHTML = '<g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'
-      + '<path d="M5 17h14v-4.5l-1.8-4.3A2 2 0 0 0 15.4 7H8.6a2 2 0 0 0-1.8 1.2L5 12.5z"/>'
-      + '<path d="M5 12.5h14M9.5 4.5h5v2.5h-5z"/><circle cx="8" cy="17" r="1.6"/><circle cx="16" cy="17" r="1.6"/></g>';
     ul.append(el('li', { className: 'liste-vide' },
-      icone,
+      iconeTaxi(),
       estAujourdhui ? "Aucune course aujourd'hui" : 'Aucune course ce jour-là',
       el('small', { textContent: 'Touchez + pour en ajouter une' })
     ));
   }
   for (const { store, heure, course } of courses) ul.append(ligneCourse(store, heure, course));
 }
+
+// « Bons manquants » : toutes les courses Médical / Médical donné sans bon, groupées par date
+function afficherBonsManquants(sansBon) {
+  $('#jour-semaine').replaceChildren('Tous les jours');
+  $('#jour-semaine').classList.add('autre-jour');
+  $('#jour-date').textContent = 'Bons manquants';
+
+  const total = sansBon.medical.length + sansBon.donne.length;
+  $('#resume-libelle').textContent = 'Bons de transport à récupérer';
+  $('#total-jour').textContent = String(total);
+
+  // Pastilles = filtres par type (toucher pour afficher / masquer)
+  const filtreType = (type, classePoint, libelle) => {
+    const bouton = el('button', { type: 'button', className: 'puce' },
+      el('span', { className: 'point ' + classePoint }), libelle + ' ',
+      el('strong', { textContent: String(sansBon[type].length) }));
+    bouton.setAttribute('aria-pressed', String(etat.typesSansBon[type]));
+    bouton.addEventListener('click', () => {
+      etat.typesSansBon[type] = !etat.typesSansBon[type];
+      afficherFeuille();
+    });
+    return bouton;
+  };
+  $('#detail-total').replaceChildren(
+    filtreType('medical', 'point-m', 'Médical'),
+    filtreType('donne', 'point-d', 'Donné')
+  );
+
+  // Du plus récent au plus ancien, groupé par date
+  const courses = [
+    ...(etat.typesSansBon.medical ? sansBon.medical.map(c => ({ store: 'medical', heure: heureMedical(c), course: c })) : []),
+    ...(etat.typesSansBon.donne ? sansBon.donne.map(c => ({ store: 'donne', heure: c.heure || '', course: c })) : [])
+  ].sort((a, b) => b.course.date.localeCompare(a.course.date) || a.heure.localeCompare(b.heure));
+
+  const ul = $('#liste-jour');
+  ul.replaceChildren();
+  ul.classList.toggle('vide', courses.length === 0);
+  if (courses.length === 0) {
+    ul.append(el('li', { className: 'liste-vide' },
+      iconeTaxi(),
+      'Aucun bon manquant',
+      el('small', { textContent: total === 0 ? 'Tous les bons de transport sont là 👍' : 'Touchez une pastille pour afficher ce type' })
+    ));
+  }
+  let dateCourante = null;
+  for (const { store, heure, course } of courses) {
+    if (course.date !== dateCourante) {
+      dateCourante = course.date;
+      const t = titreDuJour(course.date);
+      ul.append(el('li', { className: 'groupe-date', textContent: `${t.semaine} ${t.date}` }));
+    }
+    ul.append(ligneCourse(store, heure, course));
+  }
+}
+
+document.querySelectorAll('[data-filtre]').forEach(b => b.addEventListener('click', () => {
+  etat.filtre = b.dataset.filtre;
+  window.scrollTo(0, 0);
+  afficherFeuille();
+}));
 
 const TRAJETS_COURTS = { 'Aller': 'Aller', 'Aller/Retour': 'A/R', 'Retour': 'Retour' };
 
@@ -181,6 +268,11 @@ function ligneCourse(store, heure, c) {
   } else if (store === 'medical') {
     titre = c.nom;
     sous = TRAJETS_COURTS[c.trajet] || c.trajet;
+    // Pas de bon : petit ⚠ (avec le nom du taxi qui l'a, s'il est indiqué)
+    if (!c.bon) {
+      sous = [sous + ' · ', el('span', { className: 'c-alerte',
+        textContent: c.taxiBon ? `⚠ Bon : ${c.taxiBon}` : '⚠ Sans bon' })];
+    }
   } else {
     // Course donnée : pas de prix, on indique si on a le bon de transport
     titre = c.nom;
@@ -198,7 +290,7 @@ function ligneCourse(store, heure, c) {
     el('span', { className: 'c-type' + pastille.classe, textContent: pastille.lettre, title: pastille.nom }),
     el('span', { className: 'c-texte' },
       el('span', { className: 'c-titre', textContent: titre }),
-      el('span', { className: 'c-sous', textContent: sous })
+      el('span', { className: 'c-sous' }, ...[].concat(sous))
     ),
     droite
   );
@@ -213,7 +305,9 @@ function changerJour(iso) {
 
 $('#jour-precedent').addEventListener('click', () => changerJour(decalerJour(etat.jour, -1)));
 $('#jour-suivant').addEventListener('click', () => changerJour(decalerJour(etat.jour, 1)));
-$('#titre-date').addEventListener('click', () => changerJour(aujourdhui()));
+$('#titre-date').addEventListener('click', () => {
+  if (etat.filtre === 'jour') changerJour(aujourdhui());
+});
 /* ---------- Ouverture / fermeture des formulaires ---------- */
 
 // Pour chaque type de course : titre, remise à zéro et remplissage du formulaire
@@ -304,7 +398,8 @@ formPrive.addEventListener('submit', async e => {
       modifieLe: maintenant
     };
     await DB.enregistrer('prive', course);
-    etat.jour = course.date;   // retour sur la feuille du jour de la course
+    // Retour sur la feuille du jour de la course (en mode « Bons manquants », on reste où on était)
+    if (etat.filtre === 'jour') etat.jour = course.date;
     await fermerFormulaire();
     message(ancienne ? 'Course modifiée ✓' : 'Course ajoutée ✓');
   } catch (erreur) {
@@ -334,7 +429,9 @@ function donneesMedical() {
     trajet: c.trajet.value,
     km: kmValide,
     kmTotal: kmValide == null ? null : arrondi(c.trajet.value === 'Aller/Retour' ? kmValide * 2 : kmValide, 1),
-    priseEnCharge: c.priseEnCharge.value
+    priseEnCharge: c.priseEnCharge.value,
+    bon: c.bon.checked,
+    taxiBon: c.bon.checked ? '' : c.taxiBon.value.trim()   // le taxi qui a le bon, si je ne l'ai pas
   };
 }
 
@@ -403,6 +500,7 @@ function reinitFormMedical() {
   numeroCalculKm++;
   prixSaisiALaMain = false;
   majInfoKm();
+  majBlocTaxiBon();
 }
 
 function remplirFormMedical(course) {
@@ -417,9 +515,12 @@ function remplirFormMedical(course) {
   c.km.value = versChamp(course.km);
   c.priseEnCharge.value = course.priseEnCharge;
   c.prix.value = versChamp(course.prix);
+  c.bon.checked = Boolean(course.bon);   // anciennes courses sans cette case : non cochée
+  c.taxiBon.value = course.taxiBon || '';
   numeroCalculKm++;
   prixSaisiALaMain = course.prix != null;
   majInfoKm();
+  majBlocTaxiBon();
 }
 
 formMedical.addEventListener('submit', async e => {
@@ -444,7 +545,9 @@ formMedical.addEventListener('submit', async e => {
       modifieLe: maintenant
     };
     await DB.enregistrer('medical', course);
-    etat.jour = course.date;   // retour sur la feuille du jour de la course
+    if (course.taxiBon) await memoriserCollegue(course.taxiBon, '');
+    // Retour sur la feuille du jour de la course (en mode « Bons manquants », on reste où on était)
+    if (etat.filtre === 'jour') etat.jour = course.date;
     await fermerFormulaire();
     message(ancienne ? 'Course modifiée ✓' : 'Course ajoutée ✓');
   } catch (erreur) {
@@ -512,13 +615,68 @@ async function afficherCollegues() {
   }
 }
 
+/* ---------- Suggestions des taxis déjà saisis (champ « taxi ») ---------- */
+// quandChoisi(collegue) est appelé quand on touche une suggestion.
+// Renvoie la fonction qui ferme la liste.
+function brancherSuggestionsTaxi(champ, quandChoisi) {
+  const liste = el('ul', { className: 'suggestions', hidden: true });
+  champ.closest('.champ-adresse').append(liste);
+
+  const fermer = () => {
+    liste.hidden = true;
+    liste.replaceChildren();
+  };
+
+  // Chaque mot tapé doit commencer un mot du nom
+  function suggerer() {
+    const mots = normaliser(champ.value).split(' ').filter(Boolean);
+    const trouves = collegues.filter(c => {
+      const motsNom = normaliser(c.nom).split(' ');
+      return mots.every(m => motsNom.some(n => n.startsWith(m)));
+    }).slice(0, 6);
+    liste.replaceChildren(...trouves.map(c => {
+      const bouton = el('button', { type: 'button', className: 'suggestion' },
+        el('span', { className: 'sugg-icone', textContent: '🚕' }),
+        el('span', { className: 'sugg-texte' },
+          el('strong', { textContent: c.nom }),
+          c.telephone ? el('small', { textContent: c.telephone }) : null
+        )
+      );
+      bouton.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        champ.value = c.nom;
+        fermer();
+        quandChoisi(c);
+      });
+      return el('li', {}, bouton);
+    }));
+    liste.hidden = trouves.length === 0;
+  }
+
+  champ.addEventListener('input', suggerer);
+  champ.addEventListener('focus', suggerer);
+  champ.addEventListener('blur', () => setTimeout(fermer, 150));
+  return fermer;
+}
+
+/* ---------- Bon de transport du formulaire Médical ---------- */
+
+const caseBonMedical = $('#bon-medical');
+const champTaxiBon = $('#taxi-bon');
+const fermerTaxisBon = brancherSuggestionsTaxi(champTaxiBon, () => {});
+
+// Le champ « Nom du taxi » n'apparaît que si la case « J'ai » n'est pas cochée
+function majBlocTaxiBon() {
+  $('#bloc-taxi-bon').hidden = caseBonMedical.checked;
+  if (caseBonMedical.checked) fermerTaxisBon();
+}
+caseBonMedical.addEventListener('change', majBlocTaxiBon);
+
 /* ---------- Formulaire Médical donné (course confiée à un collègue) ---------- */
 
 const champTaxi = $('#taxi-nom');
 const champTelTaxi = $('#taxi-tel');
 const lienAppel = $('#appel-taxi');
-const listeTaxis = el('ul', { className: 'suggestions', hidden: true });
-champTaxi.closest('.champ-adresse').append(listeTaxis);
 
 // Lien « Appeler » sous le numéro du taxi
 function majLienAppel() {
@@ -529,43 +687,13 @@ function majLienAppel() {
   lienAppel.textContent = '📞 Appeler ' + tel;
 }
 
-function fermerTaxis() {
-  listeTaxis.hidden = true;
-  listeTaxis.replaceChildren();
-}
-
-function choisirTaxi(collegue) {
-  champTaxi.value = collegue.nom;
+// Choisir un collègue connu remplit son numéro (modifiable)
+const fermerTaxis = brancherSuggestionsTaxi(champTaxi, collegue => {
   if (collegue.telephone) champTelTaxi.value = collegue.telephone;
   majLienAppel();
-  fermerTaxis();
-}
+});
 
-// Suggestions des taxis déjà saisis : chaque mot tapé doit commencer un mot du nom
-function suggererTaxis() {
-  const mots = normaliser(champTaxi.value).split(' ').filter(Boolean);
-  const trouves = collegues.filter(c => {
-    const motsNom = normaliser(c.nom).split(' ');
-    return mots.every(m => motsNom.some(n => n.startsWith(m)));
-  }).slice(0, 6);
-  listeTaxis.replaceChildren(...trouves.map(c => {
-    const bouton = el('button', { type: 'button', className: 'suggestion' },
-      el('span', { className: 'sugg-icone', textContent: '🚕' }),
-      el('span', { className: 'sugg-texte' },
-        el('strong', { textContent: c.nom }),
-        c.telephone ? el('small', { textContent: c.telephone }) : null
-      )
-    );
-    bouton.addEventListener('pointerdown', e => { e.preventDefault(); choisirTaxi(c); });
-    return el('li', {}, bouton);
-  }));
-  listeTaxis.hidden = trouves.length === 0;
-}
-
-champTaxi.addEventListener('input', suggererTaxis);
-champTaxi.addEventListener('focus', suggererTaxis);
 champTaxi.addEventListener('blur', () => {
-  setTimeout(fermerTaxis, 150);
   // Nom d'un collègue connu tapé en entier : on remplit son numéro s'il est vide
   const connu = collegues.find(c => memeNom(c.nom, champTaxi.value));
   if (connu && connu.telephone && !champTelTaxi.value.trim()) {
@@ -617,7 +745,8 @@ formDonne.addEventListener('submit', async e => {
     };
     await DB.enregistrer('donne', course);
     await memoriserCollegue(course.taxi, course.telTaxi);
-    etat.jour = course.date;   // retour sur la feuille du jour de la course
+    // Retour sur la feuille du jour de la course (en mode « Bons manquants », on reste où on était)
+    if (etat.filtre === 'jour') etat.jour = course.date;
     await fermerFormulaire();
     message(ancienne ? 'Course modifiée ✓' : 'Course donnée enregistrée ✓');
   } catch (erreur) {
@@ -759,11 +888,11 @@ async function exporterCSV(store) {
   } else {
     courses.sort((a, b) => (a.date + heureMedical(a)).localeCompare(b.date + heureMedical(b)));
     entetes = ['Date', 'Heure', 'Nom / Prénom', 'Téléphone', 'Adresse client', "Adresse d'arrivée",
-      'Trajet', 'Km (un trajet)', 'Km total', 'Prise en charge', 'Prix (€)'];
+      'Trajet', 'Km (un trajet)', 'Km total', 'Prise en charge', 'Prix (€)', 'Bon de transport', 'Taxi (bon)'];
     lignes = courses.map(c => [
       dateFr(c.date), heureMedical(c), celluleCSV(c.nom), celluleCSV(c.telephone), celluleCSV(c.adresseDepart),
       celluleCSV(c.adresseArrivee), celluleCSV(c.trajet), nombreCSV(c.km), nombreCSV(c.kmTotal),
-      celluleCSV(c.priseEnCharge), prixCSV(c.prix)
+      celluleCSV(c.priseEnCharge), prixCSV(c.prix), c.bon ? 'Oui' : 'Non', celluleCSV(c.taxiBon)
     ]);
   }
   // ﻿ au début : indique à Excel que le fichier est en UTF-8 (accents corrects)

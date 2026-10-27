@@ -132,9 +132,45 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 }
 .btn-icone:active { background: var(--surface); color: var(--texte); }
 
+/* ---------- Filtre Journée / Bons manquants ---------- */
+.segments {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-top: 16px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--surface);
+}
+.segment {
+  min-height: 40px;
+  border: none;
+  border-radius: 11px;
+  background: none;
+  color: var(--texte-doux);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.segment.actif { background: var(--surface-2); color: var(--texte); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35); }
+.compteur {
+  display: inline-block;
+  min-width: 22px;
+  margin-left: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(240, 163, 94, 0.16);
+  color: var(--alerte);
+  font-size: 13px;
+  font-family: var(--police-chiffres);
+}
+.compteur:empty { display: none; }
+#accueil.mode-bons .fleche { visibility: hidden; }
+#accueil.mode-bons .titre-date { cursor: default; }
+
 /* ---------- Carte du total ---------- */
 .resume {
-  margin: 22px 0 20px;
+  margin: 16px 0 20px;
   padding: 20px 20px 18px;
   border-radius: 22px;
   background:
@@ -169,6 +205,8 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   font-variant-numeric: tabular-nums;
 }
 .puce strong { color: var(--texte); font-weight: 600; }
+button.puce { border: none; }
+button.puce[aria-pressed="false"] { opacity: 0.4; }
 .point { width: 7px; height: 7px; border-radius: 50%; background: var(--texte-doux); }
 .point-m { background: var(--accent); }
 .point-d { background: var(--donne); }
@@ -183,6 +221,17 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 }
 .liste-jour.vide { background: none; }
 .liste-jour li + li .course { border-top: 1px solid var(--separateur); }
+/* Titre de date dans la liste des bons manquants */
+.groupe-date {
+  padding: 16px 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--texte-doux);
+}
+.liste-jour .groupe-date + li .course { border-top: none; }
+.c-alerte { color: var(--alerte); }
 
 .course {
   display: grid;
@@ -447,6 +496,14 @@ input[type="checkbox"]:checked {
   border-color: var(--accent);
   background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2317140a' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 16px no-repeat;
 }
+
+/* Bon de transport (formulaire Médical) : case « J'ai » + nom du taxi à côté */
+.bloc-bon { margin-bottom: 16px; }
+.etiquette { display: block; font-size: 13px; font-weight: 500; color: var(--texte-doux); margin-bottom: 7px; }
+.ligne-bon { display: flex; gap: 10px; align-items: stretch; }
+.formulaire label.case-compacte { flex: 0 0 auto; margin: 0; padding-right: 18px; }
+.ligne-bon .champ-taxi-bon { flex: 1; min-width: 0; margin: 0; }
+.ligne-bon .champ-taxi-bon input { margin-top: 0; height: 100%; }
 
 .lien-appel {
   display: inline-block;
