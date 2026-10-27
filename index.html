@@ -46,6 +46,9 @@
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
         </button>
       </div>
+      <button type="button" class="btn-icone" id="btn-stats" aria-label="Statistiques">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V12M12 20V5M19 20v-9"/></svg>
+      </button>
       <button type="button" class="btn-icone" id="btn-reglages" aria-label="Réglages">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="3"/>
@@ -244,6 +247,46 @@
       <button type="submit" class="btn btn-principal" id="btn-valider-donne">Ajouter la course</button>
       <button type="button" class="btn btn-danger" id="btn-supprimer-donne" hidden>Supprimer la course</button>
     </form>
+  </section>
+
+  <!-- ===================== STATISTIQUES ===================== -->
+  <section class="ecran" id="ecran-stats" hidden>
+    <div class="barre-ecran">
+      <button type="button" class="btn-texte" data-fermer-ecran>‹ Retour</button>
+      <h2>Statistiques</h2>
+      <span class="barre-espace"></span>
+    </div>
+
+    <div class="segments segments-3" role="group" aria-label="Période">
+      <button type="button" class="segment" data-periode="jour">Jour</button>
+      <button type="button" class="segment" data-periode="mois">Mois</button>
+      <button type="button" class="segment" data-periode="annee">Année</button>
+    </div>
+
+    <div class="nav-periode">
+      <button type="button" class="fleche" id="periode-precedente" aria-label="Période précédente">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <span class="titre-periode" id="titre-periode"></span>
+      <button type="button" class="fleche" id="periode-suivante" aria-label="Période suivante">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+
+    <section class="resume">
+      <div class="resume-libelle">Chiffre d'affaires</div>
+      <div class="total" id="stats-ca"></div>
+      <div class="evolution" id="stats-evolution"></div>
+      <div class="puces" id="stats-detail-ca"></div>
+    </section>
+
+    <!-- Graphique : un bâton par jour (mois) ou par mois (année) -->
+    <section class="carte-graphique" id="stats-graphique"></section>
+
+    <div class="tuiles" id="stats-tuiles"></div>
+
+    <h3 class="titre-section" id="titre-paiements">Paiements (courses privées)</h3>
+    <ul class="liste-stats" id="stats-paiements"></ul>
   </section>
 
   <!-- ===================== PANNEAU « + » ===================== -->

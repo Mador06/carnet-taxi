@@ -322,6 +322,218 @@ choixDate.addEventListener('change', () => {
   if (choixDate.value) changerJour(choixDate.value);
   else choixDate.value = etat.jour;
 });
+
+/* ---------- Statistiques ---------- */
+
+// Période affichée : 'jour', 'mois' ou 'annee', qui contient le jour "ref"
+etat.stats = { periode: 'mois', ref: aujourdhui() };
+
+// Toutes les dates d'une période commencent pareil : "2026-10-28", "2026-10" ou "2026"
+const LONGUEUR_PERIODE = { jour: 10, mois: 7, annee: 4 };
+const prefixePeriode = (periode, ref) => ref.slice(0, LONGUEUR_PERIODE[periode]);
+const PERIODE_PRECEDENTE = { jour: 'la veille', mois: 'le mois précédent', annee: "l'année précédente" };
+const majuscule = t => t.charAt(0).toUpperCase() + t.slice(1);
+
+function decalerPeriode(periode, ref, n) {
+  if (periode === 'jour') return decalerJour(ref, n);
+  const d = dateLocale(ref);
+  if (periode === 'mois') return dateISO(new Date(d.getFullYear(), d.getMonth() + n, 1));
+  return dateISO(new Date(d.getFullYear() + n, 0, 1));
+}
+
+function titrePeriode(periode, ref) {
+  if (periode === 'jour') {
+    const t = titreDuJour(ref);
+    return `${t.semaine} ${t.date}`;
+  }
+  if (periode === 'mois') {
+    return majuscule(new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(dateLocale(ref)));
+  }
+  return ref.slice(0, 4);
+}
+
+// Km parcourus sur une course médicale (un aller/retour compte deux fois)
+function kmCourse(c) {
+  if (c.kmTotal != null) return c.kmTotal;
+  if (c.km == null) return 0;
+  return c.trajet === 'Aller/Retour' ? c.km * 2 : c.km;
+}
+
+const somme = (liste, valeur) => liste.reduce((s, c) => s + (valeur(c) || 0), 0);
+const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
+
+// Les chiffres d'une période (les courses données ne comptent pas dans l'argent)
+function chiffresPeriode(toutes, prefixe) {
+  const dans = liste => liste.filter(c => c.date && c.date.startsWith(prefixe));
+  const prive = dans(toutes.prive);
+  const medical = dans(toutes.medical);
+  const donne = dans(toutes.donne);
+  const caPrive = somme(prive, c => c.prix);
+  const caMedical = somme(medical, c => c.prix);
+  return {
+    prive, medical, donne, caPrive, caMedical,
+    ca: caPrive + caMedical,
+    nombre: prive.length + medical.length,
+    km: somme(medical, kmCourse),
+    jours: new Set([...prive, ...medical].map(c => c.date)).size,
+    sansBon: medical.filter(c => !c.bon).length + donne.filter(c => !c.bon).length
+  };
+}
+
+async function afficherStats() {
+  const { periode, ref } = etat.stats;
+  const [prive, medical, donne] = await Promise.all(STORES.map(s => DB.tout(s)));
+  const toutes = { prive, medical, donne };
+  const ch = chiffresPeriode(toutes, prefixePeriode(periode, ref));
+  const avant = chiffresPeriode(toutes, prefixePeriode(periode, decalerPeriode(periode, ref, -1)));
+
+  document.querySelectorAll('[data-periode]').forEach(b => b.classList.toggle('actif', b.dataset.periode === periode));
+  $('#titre-periode').textContent = titrePeriode(periode, ref);
+
+  // Chiffre d'affaires, et comparaison avec la période d'avant
+  $('#stats-ca').textContent = euros(ch.ca);
+  const evolution = $('#stats-evolution');
+  evolution.className = 'evolution';
+  if (avant.ca > 0) {
+    const pourcent = Math.round((ch.ca - avant.ca) / avant.ca * 100);
+    evolution.textContent = `${pourcent >= 0 ? '▲ +' : '▼ '}${pourcent} % par rapport à ${PERIODE_PRECEDENTE[periode]}`;
+    evolution.classList.add(pourcent >= 0 ? 'hausse' : 'baisse');
+  } else {
+    evolution.textContent = '';
+  }
+  const puce = (classePoint, libelle, valeur) => el('span', { className: 'puce' },
+    el('span', { className: 'point ' + classePoint }), libelle + ' ', el('strong', { textContent: valeur }));
+  $('#stats-detail-ca').replaceChildren(
+    puce('', 'Privé', euros(ch.caPrive)),
+    puce('point-m', 'Médical', euros(ch.caMedical)));
+
+  graphiqueStats(toutes, periode, ref);
+
+  // Petites cases de chiffres
+  const tuile = (libelle, valeur, sous, classe = '') => el('div', { className: 'tuile ' + classe },
+    el('div', { className: 'tuile-libelle', textContent: libelle }),
+    el('div', { className: 'tuile-valeur', textContent: valeur }),
+    el('div', { className: 'tuile-sous', textContent: sous }));
+  const tuiles = [
+    tuile('Courses', String(ch.nombre), `${pluriel(ch.prive.length, 'privée')} · ${pluriel(ch.medical.length, 'médicale')}`),
+    tuile('Kilomètres', `${formatKm(ch.km)} km`, 'courses médicales'),
+    tuile('Prix moyen', ch.nombre ? euros(ch.ca / ch.nombre) : '—', 'par course')
+  ];
+  if (periode !== 'jour') {
+    tuiles.push(tuile('Jours travaillés', String(ch.jours), ch.jours ? `${euros(ch.ca / ch.jours)} par jour` : '—'));
+  }
+  tuiles.push(
+    tuile('Courses données', String(ch.donne.length), 'à des collègues', 'tuile-donne'),
+    tuile('Bons manquants', String(ch.sansBon), 'à récupérer', ch.sansBon ? 'tuile-alerte' : ''));
+  $('#stats-tuiles').replaceChildren(...tuiles);
+
+  // Paiements des courses privées
+  const parPaiement = new Map();
+  for (const c of ch.prive) {
+    const p = parPaiement.get(c.paiement) || { nombre: 0, total: 0 };
+    p.nombre += 1;
+    p.total += c.prix || 0;
+    parPaiement.set(c.paiement, p);
+  }
+  $('#titre-paiements').hidden = parPaiement.size === 0;
+  $('#stats-paiements').replaceChildren(...[...parPaiement]
+    .sort((a, b) => b[1].total - a[1].total)
+    .map(([nom, p]) => el('li', {},
+      el('span', { textContent: nom }),
+      el('span', { className: 'texte-doux', textContent: pluriel(p.nombre, 'course') }),
+      el('strong', { textContent: euros(p.total) }))));
+}
+
+// Un bâton par jour (vue mois) ou par mois (vue année) : médical en jaune, privé en gris
+function graphiqueStats(toutes, periode, ref) {
+  const zone = $('#stats-graphique');
+  zone.hidden = periode === 'jour';
+  if (periode === 'jour') return;
+
+  const longueur = periode === 'mois' ? 10 : 7;   // regroupe par "2026-10-28" ou par "2026-10"
+  const parCle = new Map();
+  for (const store of ['prive', 'medical']) {
+    for (const c of toutes[store]) {
+      if (!c.date) continue;
+      const cle = c.date.slice(0, longueur);
+      const v = parCle.get(cle) || { prive: 0, medical: 0 };
+      v[store] += c.prix || 0;
+      parCle.set(cle, v);
+    }
+  }
+
+  const d = dateLocale(ref);
+  const cases = [];
+  if (periode === 'mois') {
+    const nbJours = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    for (let j = 1; j <= nbJours; j++) {
+      cases.push({ cle: `${ref.slice(0, 7)}-${deuxChiffres(j)}`, court: j === 1 || j % 5 === 0 ? String(j) : '' });
+    }
+  } else {
+    const lettres = 'JFMAMJJASOND';
+    for (let m = 1; m <= 12; m++) cases.push({ cle: `${ref.slice(0, 4)}-${deuxChiffres(m)}`, court: lettres[m - 1] });
+  }
+  const valeurs = cases.map(k => parCle.get(k.cle) || { prive: 0, medical: 0 });
+  const max = Math.max(...valeurs.map(v => v.prive + v.medical));
+  const hauteur = n => (max > 0 ? `${(n / max) * 100}%` : '0');
+  const cleActuelle = aujourdhui().slice(0, longueur);
+
+  const barres = el('div', { className: 'barres' });
+  const etiquettes = el('div', { className: 'etiquettes' });
+  cases.forEach((k, i) => {
+    const v = valeurs[i];
+    const prive = el('span', { className: 'b-prive' });
+    const medical = el('span', { className: 'b-medical' });
+    prive.style.height = hauteur(v.prive);
+    medical.style.height = hauteur(v.medical);
+    const barre = el('button', { type: 'button', className: 'barre' + (k.cle === cleActuelle ? ' actuelle' : '') }, prive, medical);
+    barre.setAttribute('aria-label', `${periode === 'mois' ? dateFr(k.cle) : titrePeriode('mois', k.cle + '-01')} : ${euros(v.prive + v.medical)}`);
+    // Toucher un jour ouvre sa feuille ; toucher un mois affiche ce mois
+    barre.addEventListener('click', () => {
+      if (periode === 'mois') {
+        etat.jour = k.cle;
+        etat.filtre = 'jour';
+        fermerFormulaire();
+      } else {
+        etat.stats = { periode: 'mois', ref: k.cle + '-01' };
+        afficherStats();
+      }
+    });
+    barres.append(barre);
+    etiquettes.append(el('span', { className: k.cle === cleActuelle ? 'actuelle' : '', textContent: k.court }));
+  });
+
+  zone.replaceChildren(
+    el('div', { className: 'graphique-entete' },
+      el('span', { textContent: periode === 'mois' ? 'Par jour' : 'Par mois' }),
+      el('span', { className: 'texte-doux', textContent: max > 0 ? `max ${euros(max)}` : '' })),
+    barres, etiquettes,
+    el('div', { className: 'graphique-aide',
+      textContent: periode === 'mois' ? 'Touchez un jour pour voir sa feuille' : 'Touchez un mois pour le détailler' }));
+}
+
+function ouvrirStats() {
+  etat.ecran = 'stats';
+  etat.stats.ref = etat.filtre === 'jour' ? etat.jour : aujourdhui();
+  $('#accueil').hidden = true;
+  $('#ecran-stats').hidden = false;
+  window.scrollTo(0, 0);
+  afficherStats().catch(e => message(e.message, true));
+}
+
+$('#btn-stats').addEventListener('click', ouvrirStats);
+document.querySelectorAll('[data-periode]').forEach(b => b.addEventListener('click', () => {
+  etat.stats.periode = b.dataset.periode;
+  afficherStats();
+}));
+$('#periode-precedente').addEventListener('click', () => {
+  etat.stats.ref = decalerPeriode(etat.stats.periode, etat.stats.ref, -1);
+  afficherStats();
+});
+$('#periode-suivante').addEventListener('click', () => {
+  etat.stats.ref = decalerPeriode(etat.stats.periode, etat.stats.ref, 1);
+  afficherStats();
+});
 /* ---------- Ouverture / fermeture des formulaires ---------- */
 
 // Pour chaque type de course : titre, remise à zéro et remplissage du formulaire
@@ -351,6 +563,7 @@ function fermerFormulaire() {
   etat.ecran = null;
   etat.edition = { prive: null, medical: null, donne: null };
   for (const s of STORES) $(`#ecran-${s}`).hidden = true;
+  $('#ecran-stats').hidden = true;
   $('#accueil').hidden = false;
   window.scrollTo(0, 0);
   return afficherFeuille();

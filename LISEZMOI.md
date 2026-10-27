@@ -37,6 +37,7 @@ Seul le texte tapé dans les champs adresse est envoyé à ces services. Aucun n
 - Toucher une course : la modifier ou la supprimer.
 - Bouton **+** : nouvelle course Privé, Médical ou **Médical donné** (la date proposée est celle du jour affiché).
 - **Médical donné** (pastille D) : course confiée à un collègue. Pas de prix, ne compte pas dans le total. ✓ Bon / ⚠ Sans bon indique si vous avez le bon de transport. Le nom et le numéro du taxi sont mémorisés et proposés la fois suivante ; « 📞 Appeler » dans le formulaire.
+- **Statistiques** (icône à bâtons, à côté de la roue dentée) : vue Jour / Mois / Année avec flèches ‹ ›. Chiffre d'affaires (privé + médical, comparé à la période précédente), graphique en bâtons (toucher un jour ouvre sa feuille, toucher un mois le détaille), nombre de courses, kilomètres (courses médicales, aller/retour compté deux fois), prix moyen, jours travaillés, courses données, bons manquants, et répartition des paiements des courses privées.
 - Roue dentée en haut à droite : sauvegarde, restauration, export CSV (Privé, Médical, Médical donné), **Mes collègues taxi** (modifier, supprimer).
 - Les anciennes courses médicales sans heure sont classées à l'heure où elles ont été saisies.
 - **Bon de transport (Médical)** : case « J'ai » ; si elle n'est pas cochée, un champ « Nom du taxi » apparaît à côté (collègues proposés). Sur la feuille : « ⚠ Sans bon » ou « ⚠ Bon : nom du taxi ». Les anciennes courses médicales, sans cette case, comptent comme « sans bon » jusqu'à ce qu'on la coche.

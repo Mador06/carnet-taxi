@@ -18,6 +18,7 @@
   --donne: #8caae6;          /* « Médical donné » */
   --donne-doux: rgba(140, 170, 230, 0.14);
   --alerte: #f0a35e;         /* bon de transport manquant */
+  --hausse: #6fcf97;         /* statistiques en hausse */
   --rayon: 18px;
   --gouttiere: 20px;
   /* Police arrondie de l'iPhone pour les chiffres (prix, heures, total) */
@@ -170,6 +171,10 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   place-items: center;
 }
 .btn-icone:active { background: var(--surface); color: var(--texte); }
+/* Deux icônes côte à côte (statistiques, réglages) : seule la dernière déborde */
+.entete .btn-icone { margin-right: 0; }
+.entete .btn-icone:last-child { margin-right: -8px; }
+.entete .btn-icone + .btn-icone { margin-left: -8px; }
 
 /* ---------- Filtre Journée / Bons manquants ---------- */
 .segments {
@@ -645,6 +650,135 @@ dialog.panneau h3 {
 }
 
 .texte-doux { color: var(--texte-doux); font-size: 14px; margin: 4px 0 4px; }
+
+/* ============================================================
+   Statistiques
+   ============================================================ */
+
+.segments-3 { grid-template-columns: repeat(3, 1fr); margin-top: 6px; }
+
+.nav-periode {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+.titre-periode {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-align: center;
+}
+#ecran-stats .resume { margin: 8px 0 14px; }
+
+.evolution { margin-top: 4px; font-size: 14px; font-weight: 600; }
+.evolution:empty { display: none; }
+.evolution.hausse { color: var(--hausse); }
+.evolution.baisse { color: var(--danger); }
+
+/* Graphique en bâtons */
+.carte-graphique {
+  margin-bottom: 14px;
+  padding: 16px 14px 12px;
+  border-radius: var(--rayon);
+  background: var(--surface);
+}
+.graphique-entete {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.graphique-entete .texte-doux { margin: 0; font-size: 13px; font-weight: 500; font-family: var(--police-chiffres); }
+.barres, .etiquettes { display: flex; gap: 2px; }
+.barres { height: 120px; align-items: stretch; }
+.barre {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0;
+  border: none;
+  border-radius: 4px 4px 0 0;
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+.barre.actuelle { background: rgba(245, 197, 66, 0.08); }
+.barre:active { background: rgba(255, 255, 255, 0.12); }
+.b-prive { display: block; background: var(--texte-doux); }
+.b-medical { display: block; background: var(--accent); }
+.etiquettes span {
+  flex: 1;
+  min-width: 0;
+  margin-top: 6px;
+  font-size: 11px;
+  text-align: center;
+  color: var(--texte-faible);
+  font-family: var(--police-chiffres);
+  overflow: visible;
+  white-space: nowrap;
+}
+.etiquettes span.actuelle { color: var(--accent); font-weight: 700; }
+.graphique-aide { margin-top: 10px; font-size: 12px; color: var(--texte-faible); text-align: center; }
+
+/* Cases de chiffres, deux par ligne */
+.tuiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.tuile {
+  min-width: 0;
+  padding: 14px 15px;
+  border-radius: 16px;
+  background: var(--surface);
+}
+.tuile-libelle { font-size: 13px; color: var(--texte-doux); }
+.tuile-valeur {
+  margin-top: 2px;
+  font-family: var(--police-chiffres);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tuile-sous { margin-top: 2px; font-size: 12px; color: var(--texte-faible); }
+.tuile-donne .tuile-valeur { color: var(--donne); }
+.tuile-alerte .tuile-valeur { color: var(--alerte); }
+
+.titre-section {
+  margin: 22px 4px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texte-doux);
+}
+.liste-stats {
+  list-style: none;
+  margin: 0;
+  padding: 0 15px;
+  border-radius: var(--rayon);
+  background: var(--surface);
+}
+.liste-stats:empty { display: none; }
+.liste-stats li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 13px 0;
+  font-size: 16px;
+}
+.liste-stats li + li { border-top: 1px solid var(--separateur); }
+.liste-stats li span:first-child { flex: 1; }
+.liste-stats .texte-doux { margin: 0; }
+.liste-stats strong { font-family: var(--police-chiffres); font-variant-numeric: tabular-nums; }
 
 /* ---------- Mes collègues taxi (réglages) ---------- */
 .liste-collegues {
