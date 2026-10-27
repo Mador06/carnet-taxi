@@ -1,6 +1,6 @@
 /* ============================================================
    app.js – fonctionnement de l'application
-   (onglets, formulaires, listes, sauvegarde, export CSV)
+   (feuille du jour, formulaires, sauvegarde, export CSV)
    ============================================================ */
 'use strict';
 
@@ -14,17 +14,29 @@ function dateISO(d) {
   return `${d.getFullYear()}-${deuxChiffres(d.getMonth() + 1)}-${deuxChiffres(d.getDate())}`;
 }
 function aujourdhui() { return dateISO(new Date()); }
-function heureActuelle() {
-  const d = new Date();
-  return `${deuxChiffres(d.getHours())}:${deuxChiffres(d.getMinutes())}`;
+function heureDe(d) { return `${deuxChiffres(d.getHours())}:${deuxChiffres(d.getMinutes())}`; }
+function heureActuelle() { return heureDe(new Date()); }
+function dateLocale(iso) {
+  const [a, m, j] = iso.split('-').map(Number);
+  return new Date(a, m - 1, j);
 }
 function decalerJour(iso, nbJours) {
-  const [a, m, j] = iso.split('-').map(Number);
-  return dateISO(new Date(a, m - 1, j + nbJours));
+  const d = dateLocale(iso);
+  d.setDate(d.getDate() + nbJours);
+  return dateISO(d);
 }
 function dateFr(iso) {
   const [a, m, j] = iso.split('-');
   return `${j}/${m}/${a}`;
+}
+
+// "2026-10-27" -> "Mardi 27 octobre" (avec l'année si ce n'est pas l'année en cours)
+function titreDuJour(iso) {
+  const d = dateLocale(iso);
+  const options = { weekday: 'long', day: 'numeric', month: 'long' };
+  if (d.getFullYear() !== new Date().getFullYear()) options.year = 'numeric';
+  const texte = new Intl.DateTimeFormat('fr-FR', options).format(d);
+  return texte.charAt(0).toUpperCase() + texte.slice(1);
 }
 
 // "12,50" ou "12.50" -> 12.5 ; vide -> null ; texte invalide -> NaN
@@ -63,12 +75,20 @@ function message(texte, estErreur = false) {
   minuteurMessage = setTimeout(() => toast.classList.remove('visible'), 2600);
 }
 
+// Heure d'une course médicale. Les anciennes n'avaient pas de champ "heure" :
+// on prend alors l'heure à laquelle elles ont été saisies.
+function heureMedical(course) {
+  if (course.heure) return course.heure;
+  const d = new Date(course.creeLe);
+  return Number.isNaN(d.getTime()) ? '' : heureDe(d);
+}
+
 /* ---------- État de l'application ---------- */
 
 const etat = {
-  onglet: 'prive',
-  jour: { prive: aujourdhui(), medical: aujourdhui() },   // jour affiché dans la liste
-  edition: { prive: null, medical: null }                  // id de la course en cours de modification
+  jour: aujourdhui(),                       // jour affiché sur la feuille
+  ecran: null,                              // formulaire ouvert : 'prive', 'medical' ou null
+  edition: { prive: null, medical: null }   // id de la course en cours de modification
 };
 
 const formPrive = $('#form-prive');
@@ -77,169 +97,133 @@ const champDepart = $('#adresse-depart');
 const champArrivee = $('#adresse-arrivee');
 const infoKm = $('#info-km');
 
-/* ---------- Onglets ---------- */
+/* ---------- Feuille du jour ---------- */
 
-function changerOnglet(nom) {
-  etat.onglet = nom;
-  document.querySelectorAll('.onglet').forEach(s => { s.hidden = s.dataset.onglet !== nom; });
-  document.querySelectorAll('.onglet-btn').forEach(b => b.classList.toggle('actif', b.dataset.cible === nom));
-  document.body.classList.toggle('mode-medical', nom === 'medical');
-  window.scrollTo(0, 0);
-  try { localStorage.setItem('onglet', nom); } catch (e) { /* pas grave */ }
-}
+async function afficherFeuille() {
+  const [prives, medicales] = await Promise.all([
+    DB.parDate('prive', etat.jour),
+    DB.parDate('medical', etat.jour)
+  ]);
+  const courses = [
+    ...prives.map(c => ({ store: 'prive', heure: c.heure || '', course: c })),
+    ...medicales.map(c => ({ store: 'medical', heure: heureMedical(c), course: c }))
+  ].sort((a, b) => a.heure.localeCompare(b.heure)
+    || String(a.course.creeLe).localeCompare(String(b.course.creeLe)));
 
-/* ---------- Navigation jour par jour ---------- */
+  // Date
+  const estAujourdhui = etat.jour === aujourdhui();
+  $('#titre-date').textContent = titreDuJour(etat.jour);
+  const sousDate = $('#sous-date');
+  sousDate.textContent = estAujourdhui ? "Aujourd'hui" : "Toucher la date pour revenir à aujourd'hui";
+  sousDate.classList.toggle('autre-jour', !estAujourdhui);
 
-function allerAuJour(store, date) {
-  etat.jour[store] = date;
-  $(`#onglet-${store} .choix-jour`).value = date;
-}
+  // Totaux
+  const somme = liste => liste.reduce((s, c) => s + (c.prix || 0), 0);
+  const totalPrive = somme(prives);
+  const totalMedical = somme(medicales);
+  $('#total-jour').textContent = euros(totalPrive + totalMedical);
+  const nombre = courses.length;
+  $('#detail-total').textContent = nombre === 0
+    ? ''
+    : `Privé ${euros(totalPrive)} · Médical ${euros(totalMedical)} · ${nombre} course${nombre > 1 ? 's' : ''}`;
 
-function brancherNavJour(store) {
-  const section = $(`#onglet-${store}`);
-  const choix = $('.choix-jour', section);
-  choix.value = etat.jour[store];
-  choix.addEventListener('change', () => {
-    if (!choix.value) return;
-    etat.jour[store] = choix.value;
-    afficherListe(store);
-  });
-  section.querySelectorAll('[data-jour]').forEach(bouton => {
-    bouton.addEventListener('click', () => {
-      allerAuJour(store, decalerJour(etat.jour[store], Number(bouton.dataset.jour)));
-      afficherListe(store);
-    });
-  });
-}
-
-/* ---------- Listes et totaux ---------- */
-
-async function afficherListe(store) {
-  const courses = await DB.parDate(store, etat.jour[store]);
-  if (store === 'prive') courses.sort((a, b) => a.heure.localeCompare(b.heure));
-  else courses.sort((a, b) => a.creeLe.localeCompare(b.creeLe));
-
-  const ul = $(`#liste-${store}`);
+  // Liste
+  const ul = $('#liste-jour');
   ul.replaceChildren();
-  if (courses.length === 0) {
-    ul.append(el('li', { className: 'liste-vide', textContent: 'Aucune course ce jour-là.' }));
+  if (nombre === 0) {
+    ul.append(el('li', {
+      className: 'liste-vide',
+      textContent: estAujourdhui ? "Aucune course aujourd'hui" : 'Aucune course ce jour-là'
+    }));
   }
-  for (const c of courses) {
-    const li = store === 'prive' ? lignePrive(c) : ligneMedical(c);
-    if (etat.edition[store] === c.id) li.classList.add('en-edition');
-    ul.append(li);
-  }
-  afficherTotaux(store, courses);
+  for (const { store, heure, course } of courses) ul.append(ligneCourse(store, heure, course));
 }
 
-function afficherTotaux(store, courses) {
-  const zone = $(`#totaux-${store}`);
-  const total = courses.reduce((somme, c) => somme + (c.prix || 0), 0);
-  const details = el('div', { className: 'sous-totaux' });
-  details.append(el('span', { textContent: `${courses.length} course${courses.length > 1 ? 's' : ''}` }));
+const TRAJETS_COURTS = { 'Aller': 'Aller', 'Aller/Retour': 'A/R', 'Retour': 'Retour' };
 
+function ligneCourse(store, heure, c) {
+  const prive = store === 'prive';
+  const titre = prive ? c.station : c.nom;
+  const sous = prive ? c.paiement : (TRAJETS_COURTS[c.trajet] || c.trajet);
+  const bouton = el('button', { type: 'button', className: 'course' },
+    el('span', { className: 'c-heure', textContent: heure }),
+    el('span', { className: 'c-type' + (prive ? '' : ' c-type-m'), textContent: prive ? 'P' : 'M',
+      title: prive ? 'Privé' : 'Médical' }),
+    el('span', { className: 'c-texte' },
+      el('span', { className: 'c-titre', textContent: titre }),
+      el('span', { className: 'c-sous', textContent: sous })
+    ),
+    el('span', { className: 'c-prix' + (c.prix == null ? ' vide' : ''),
+      textContent: c.prix == null ? '— €' : euros(c.prix) })
+  );
+  bouton.addEventListener('click', () => ouvrirFormulaire(store, c));
+  return el('li', {}, bouton);
+}
+
+function changerJour(iso) {
+  etat.jour = iso;
+  afficherFeuille();
+}
+
+$('#jour-precedent').addEventListener('click', () => changerJour(decalerJour(etat.jour, -1)));
+$('#jour-suivant').addEventListener('click', () => changerJour(decalerJour(etat.jour, 1)));
+$('#titre-date').addEventListener('click', () => changerJour(aujourdhui()));
+
+/* ---------- Ouverture / fermeture des formulaires ---------- */
+
+function ouvrirFormulaire(store, course = null) {
   if (store === 'prive') {
-    for (const mode of ['Espèces', 'Carte', 'Carte+']) {
-      const sousTotal = courses.filter(c => c.paiement === mode).reduce((s, c) => s + c.prix, 0);
-      if (sousTotal > 0) details.append(el('span', { textContent: `${mode} : ${euros(sousTotal)}` }));
-    }
+    reinitFormPrive();
+    if (course) remplirFormPrive(course);
   } else {
-    const km = courses.reduce((s, c) => s + (c.kmTotal || 0), 0);
-    if (km > 0) details.append(el('span', { textContent: `${formatKm(km)} km` }));
+    reinitFormMedical();
+    if (course) remplirFormMedical(course);
   }
+  etat.edition[store] = course ? course.id : null;
+  etat.ecran = store;
 
-  zone.replaceChildren(
-    el('div', { className: 'total-jour', textContent: `Total : ${euros(total)}` }),
-    details
-  );
+  const titre = store === 'prive' ? 'Course privée' : 'Course médicale';
+  $(`#titre-form-${store}`).textContent = course ? 'Modifier' : titre;
+  $(`#btn-valider-${store}`).textContent = course ? 'Enregistrer' : 'Ajouter la course';
+  $(`#btn-supprimer-${store}`).hidden = !course;
+
+  $('#accueil').hidden = true;
+  $('#ecran-prive').hidden = store !== 'prive';
+  $('#ecran-medical').hidden = store !== 'medical';
+  window.scrollTo(0, 0);
 }
 
-function boutonsActions(store, course) {
-  const modifier = el('button', { type: 'button', textContent: 'Modifier' });
-  modifier.addEventListener('click', () => commencerEdition(store, course));
-  const supprimer = el('button', { type: 'button', className: 'supprimer', textContent: 'Supprimer' });
-  supprimer.addEventListener('click', async () => {
-    if (!confirm('Supprimer cette course ?')) return;
-    await DB.supprimer(store, course.id);
-    if (etat.edition[store] === course.id) reinitialiserForm(store);
-    message('Course supprimée');
-    afficherListe(store);
-  });
-  return el('div', { className: 'course-actions' }, modifier, supprimer);
+function fermerFormulaire() {
+  etat.ecran = null;
+  etat.edition = { prive: null, medical: null };
+  $('#ecran-prive').hidden = true;
+  $('#ecran-medical').hidden = true;
+  $('#accueil').hidden = false;
+  window.scrollTo(0, 0);
+  return afficherFeuille();
 }
 
-function lignePrive(c) {
-  return el('li', {},
-    el('div', { className: 'course-haut' },
-      el('span', { className: 'course-titre', textContent: `${c.heure} · ${c.station}` }),
-      el('span', { className: 'course-prix', textContent: euros(c.prix) })
-    ),
-    el('div', { className: 'course-detail', textContent: c.paiement }),
-    boutonsActions('prive', c)
-  );
+document.querySelectorAll('[data-fermer-ecran]').forEach(b => b.addEventListener('click', fermerFormulaire));
+
+async function supprimerCourse(store) {
+  const id = etat.edition[store];
+  if (!id || !confirm('Supprimer cette course ?\n\nCette action est définitive.')) return;
+  await DB.supprimer(store, id);
+  await fermerFormulaire();
+  message('Course supprimée');
 }
+$('#btn-supprimer-prive').addEventListener('click', () => supprimerCourse('prive').catch(e => message(e.message, true)));
+$('#btn-supprimer-medical').addEventListener('click', () => supprimerCourse('medical').catch(e => message(e.message, true)));
 
-function ligneMedical(c) {
-  let km = '';
-  if (c.km != null) {
-    km = `${formatKm(c.km)} km`;
-    if (c.trajet === 'Aller/Retour') km += ` (A/R : ${formatKm(c.kmTotal)} km)`;
-  }
-  const infos = [c.trajet, c.priseEnCharge, km].filter(Boolean).join(' · ');
-  const trajet = [c.adresseDepart, c.adresseArrivee].filter(Boolean).join(' → ');
-
-  const detailTel = el('div', { className: 'course-detail' });
-  if (c.telephone) {
-    detailTel.append(el('a', { href: 'tel:' + c.telephone.replace(/[^\d+]/g, ''), textContent: c.telephone }));
-  }
-
-  return el('li', {},
-    el('div', { className: 'course-haut' },
-      el('span', { className: 'course-titre', textContent: c.nom }),
-      el('span', { className: 'course-prix', textContent: c.prix == null ? '— €' : euros(c.prix) })
-    ),
-    el('div', { className: 'course-detail', textContent: infos }),
-    trajet ? el('div', { className: 'course-detail', textContent: trajet }) : null,
-    c.telephone ? detailTel : null,
-    boutonsActions('medical', c)
-  );
-}
-
-/* ---------- Mode modification (commun aux deux onglets) ---------- */
-
-function modeEdition(store, actif) {
-  $(`#titre-form-${store}`).textContent = actif
-    ? 'Modifier la course'
-    : (store === 'prive' ? 'Nouvelle course' : 'Nouvelle course médicale');
-  $(`#btn-valider-${store}`).textContent = actif ? 'Enregistrer la modification' : 'Ajouter la course';
-  $(`#btn-annuler-${store}`).hidden = !actif;
-}
-
-function commencerEdition(store, course) {
-  etat.edition[store] = course.id;
-  if (store === 'prive') remplirFormPrive(course);
-  else remplirFormMedical(course);
-  modeEdition(store, true);
-  afficherListe(store);
-  $(`#form-${store}`).scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function reinitialiserForm(store) {
-  if (store === 'prive') reinitFormPrive();
-  else reinitFormMedical();
-}
-
-/* ---------- Onglet Privé ---------- */
+/* ---------- Formulaire Privé ---------- */
 
 function reinitFormPrive() {
   const c = formPrive.elements;
   const station = c.station.value;   // on garde la dernière station : souvent la même
   formPrive.reset();
   c.station.value = station;
-  c.date.value = aujourdhui();
+  c.date.value = etat.jour;
   c.heure.value = heureActuelle();
-  etat.edition.prive = null;
-  modeEdition('prive', false);
 }
 
 function remplirFormPrive(course) {
@@ -274,22 +258,16 @@ formPrive.addEventListener('submit', async e => {
       modifieLe: maintenant
     };
     await DB.enregistrer('prive', course);
+    etat.jour = course.date;   // retour sur la feuille du jour de la course
+    await fermerFormulaire();
     message(ancienne ? 'Course modifiée ✓' : 'Course ajoutée ✓');
-    allerAuJour('prive', course.date);
-    reinitFormPrive();
-    afficherListe('prive');
   } catch (erreur) {
     console.error(erreur);
     message("Erreur d'enregistrement : " + erreur.message, true);
   }
 });
 
-$('#btn-annuler-prive').addEventListener('click', () => {
-  reinitFormPrive();
-  afficherListe('prive');
-});
-
-/* ---------- Onglet Médical ---------- */
+/* ---------- Formulaire Médical ---------- */
 
 let prixSaisiALaMain = false;   // si oui, le calcul auto ne touche plus au prix
 let numeroCalculKm = 0;         // pour ignorer une réponse arrivée trop tard
@@ -300,6 +278,7 @@ function donneesMedical() {
   const kmValide = km == null || Number.isNaN(km) ? null : arrondi(km, 1);
   return {
     date: c.date.value,
+    heure: c.heure.value,
     nom: c.nom.value.trim(),
     telephone: c.telephone.value.trim(),
     adresseDepart: champDepart.value.trim(),
@@ -371,19 +350,19 @@ formMedical.elements.prix.addEventListener('input', () => {
 
 function reinitFormMedical() {
   formMedical.reset();
-  formMedical.elements.date.value = aujourdhui();
+  formMedical.elements.date.value = etat.jour;
+  formMedical.elements.heure.value = heureActuelle();
   definirAdresse(champDepart, null);
   definirAdresse(champArrivee, null);
   numeroCalculKm++;
   prixSaisiALaMain = false;
   majInfoKm();
-  etat.edition.medical = null;
-  modeEdition('medical', false);
 }
 
 function remplirFormMedical(course) {
   const c = formMedical.elements;
   c.date.value = course.date;
+  c.heure.value = heureMedical(course);
   c.nom.value = course.nom;
   c.telephone.value = course.telephone || '';
   definirAdresse(champDepart, { label: course.adresseDepart || '', ...(course.coordDepart || {}) });
@@ -419,20 +398,33 @@ formMedical.addEventListener('submit', async e => {
       modifieLe: maintenant
     };
     await DB.enregistrer('medical', course);
+    etat.jour = course.date;   // retour sur la feuille du jour de la course
+    await fermerFormulaire();
     message(ancienne ? 'Course modifiée ✓' : 'Course ajoutée ✓');
-    allerAuJour('medical', course.date);
-    reinitFormMedical();
-    afficherListe('medical');
   } catch (erreur) {
     console.error(erreur);
     message("Erreur d'enregistrement : " + erreur.message, true);
   }
 });
 
-$('#btn-annuler-medical').addEventListener('click', () => {
-  reinitFormMedical();
-  afficherListe('medical');
-});
+/* ---------- Panneaux qui montent du bas (« + » et Réglages) ---------- */
+
+const panneauAjout = $('#panneau-ajout');
+const panneauReglages = $('#dlg-reglages');
+
+$('#btn-ajouter').addEventListener('click', () => panneauAjout.showModal());
+$('#btn-reglages').addEventListener('click', () => panneauReglages.showModal());
+
+document.querySelectorAll('[data-nouvelle]').forEach(b => b.addEventListener('click', () => {
+  panneauAjout.close();
+  ouvrirFormulaire(b.dataset.nouvelle);
+}));
+
+for (const panneau of [panneauAjout, panneauReglages]) {
+  // Toucher le fond sombre ferme le panneau
+  panneau.addEventListener('click', e => { if (e.target === panneau) panneau.close(); });
+  panneau.querySelectorAll('[data-fermer-panneau]').forEach(b => b.addEventListener('click', () => panneau.close()));
+}
 
 /* ---------- Fichiers : partage (iPhone) ou téléchargement (PC) ---------- */
 
@@ -495,10 +487,8 @@ async function importerJSON(fichier) {
   if (!ok) return;
   try {
     await DB.remplacerTout(donnees);
-    reinitFormPrive();
-    reinitFormMedical();
-    await Promise.all([afficherListe('prive'), afficherListe('medical')]);
-    $('#dlg-sauvegarde').close();
+    panneauReglages.close();
+    await afficherFeuille();
     message('Sauvegarde restaurée ✓');
   } catch (erreur) {
     console.error(erreur);
@@ -528,11 +518,11 @@ async function exporterCSV(store) {
       dateFr(c.date), c.heure, celluleCSV(c.station), prixCSV(c.prix), celluleCSV(c.paiement)
     ]);
   } else {
-    courses.sort((a, b) => (a.date + a.creeLe).localeCompare(b.date + b.creeLe));
-    entetes = ['Date', 'Nom / Prénom', 'Téléphone', 'Adresse client', "Adresse d'arrivée",
+    courses.sort((a, b) => (a.date + heureMedical(a)).localeCompare(b.date + heureMedical(b)));
+    entetes = ['Date', 'Heure', 'Nom / Prénom', 'Téléphone', 'Adresse client', "Adresse d'arrivée",
       'Trajet', 'Km (un trajet)', 'Km total', 'Prise en charge', 'Prix (€)'];
     lignes = courses.map(c => [
-      dateFr(c.date), celluleCSV(c.nom), celluleCSV(c.telephone), celluleCSV(c.adresseDepart),
+      dateFr(c.date), heureMedical(c), celluleCSV(c.nom), celluleCSV(c.telephone), celluleCSV(c.adresseDepart),
       celluleCSV(c.adresseArrivee), celluleCSV(c.trajet), nombreCSV(c.km), nombreCSV(c.kmTotal),
       celluleCSV(c.priseEnCharge), prixCSV(c.prix)
     ]);
@@ -542,17 +532,11 @@ async function exporterCSV(store) {
   await partagerFichier(`carnet-taxi-${store}-${aujourdhui()}.csv`, csv, 'text/csv');
 }
 
-/* ---------- Branchements des boutons ---------- */
-
-document.querySelectorAll('.onglet-btn').forEach(b =>
-  b.addEventListener('click', () => changerOnglet(b.dataset.cible)));
+/* ---------- Branchements des boutons des réglages ---------- */
 
 document.querySelectorAll('[data-csv]').forEach(b =>
   b.addEventListener('click', () => exporterCSV(b.dataset.csv).catch(e => message(e.message, true))));
 
-const fenetreSauvegarde = $('#dlg-sauvegarde');
-$('#btn-sauvegarde').addEventListener('click', () => fenetreSauvegarde.showModal());
-$('#btn-fermer-dlg').addEventListener('click', () => fenetreSauvegarde.close());
 $('#btn-export-json').addEventListener('click', () => exporterJSON().catch(e => message(e.message, true)));
 $('#btn-import-json').addEventListener('click', () => $('#fichier-import').click());
 $('#fichier-import').addEventListener('change', async e => {
@@ -561,21 +545,17 @@ $('#fichier-import').addEventListener('change', async e => {
   if (fichier) await importerJSON(fichier);
 });
 
-// Quand on revient sur l'app : mise à jour de l'heure et du jour
+// Quand on revient sur l'app : passage à minuit, heure à jour dans un formulaire neuf
 let jourConnu = aujourdhui();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   const jour = aujourdhui();
   if (jour !== jourConnu) {
-    for (const store of STORES) {
-      if (etat.jour[store] === jourConnu) allerAuJour(store, jour);
-      const form = store === 'prive' ? formPrive : formMedical;
-      if (!etat.edition[store] && form.elements.date.value === jourConnu) form.elements.date.value = jour;
-      afficherListe(store);
-    }
+    if (etat.jour === jourConnu) etat.jour = jour;
     jourConnu = jour;
+    if (!etat.ecran) afficherFeuille();
   }
-  if (!etat.edition.prive && formPrive.elements.prix.value.trim() === '') {
+  if (etat.ecran === 'prive' && !etat.edition.prive && formPrive.elements.prix.value.trim() === '') {
     formPrive.elements.heure.value = heureActuelle();
   }
 });
@@ -583,14 +563,7 @@ document.addEventListener('visibilitychange', () => {
 /* ---------- Démarrage ---------- */
 
 async function demarrer() {
-  brancherNavJour('prive');
-  brancherNavJour('medical');
-  let onglet = 'prive';
-  try { onglet = localStorage.getItem('onglet') || 'prive'; } catch (e) { /* pas grave */ }
-  changerOnglet(onglet === 'medical' ? 'medical' : 'prive');
-  reinitFormPrive();
-  reinitFormMedical();
-  await Promise.all([afficherListe('prive'), afficherListe('medical')]);
+  await afficherFeuille();
   chargerEtablissements();   // prépare la liste des établissements à l'avance
 
   // Demande au navigateur de ne pas effacer nos données s'il manque de place
@@ -605,13 +578,11 @@ demarrer().catch(erreur => {
 // Mode hors ligne : enregistre le "service worker" (voir sw.js)
 if ('serviceWorker' in navigator) {
   // Une nouvelle version de l'app vient d'être installée : on recharge pour l'afficher,
-  // sauf si une saisie est en cours (elle s'affichera au prochain lancement)
+  // sauf si un formulaire est ouvert (elle s'affichera au prochain lancement)
   const avaitUneVersion = Boolean(navigator.serviceWorker.controller);
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!avaitUneVersion) return;   // tout premier lancement : rien à recharger
-    const saisieEnCours = etat.edition.prive || etat.edition.medical
-      || formPrive.elements.prix.value.trim() || formMedical.elements.nom.value.trim();
-    if (saisieEnCours) message("Nouvelle version prête : elle s'affichera au prochain lancement");
+    if (etat.ecran) message("Nouvelle version prête : elle s'affichera au prochain lancement");
     else location.reload();
   });
   window.addEventListener('load', () => {

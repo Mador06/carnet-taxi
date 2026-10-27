@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Carnet Taxi</title>
   <meta name="description" content="Carnet de bord taxi – Cannes">
-  <meta name="theme-color" content="#111317">
+  <meta name="theme-color" content="#0b0b0d">
   <meta name="color-scheme" content="dark">
 
   <!-- Balises spécifiques iPhone (Safari > Sur l'écran d'accueil) -->
@@ -23,161 +23,183 @@
 </head>
 <body>
 
-  <header class="entete">
-    <h1>Carnet Taxi</h1>
-    <button type="button" class="btn-entete" id="btn-sauvegarde">Sauvegarde</button>
-  </header>
-
-  <main>
-    <!-- ===================== ONGLET PRIVÉ ===================== -->
-    <section id="onglet-prive" class="onglet" data-onglet="prive">
-      <form id="form-prive" class="carte formulaire" autocomplete="off">
-        <h2 id="titre-form-prive">Nouvelle course</h2>
-
-        <div class="ligne-2">
-          <label>Date
-            <input type="date" name="date" required>
-          </label>
-          <label>Heure
-            <input type="time" name="heure" required>
-          </label>
-        </div>
-
-        <label>Station
-          <select name="station" required>
-            <option>Gare</option>
-            <option>Mairie</option>
-            <option>Palais</option>
-            <option>Majestic</option>
-            <option>Marriott</option>
-            <option>Carlton</option>
-            <option>Martinez</option>
-            <option>Palm Beach</option>
-            <option>Baoli</option>
-          </select>
-        </label>
-
-        <div class="ligne-2">
-          <label>Prix (€)
-            <input type="text" name="prix" inputmode="decimal" placeholder="0,00" required>
-          </label>
-          <label>Paiement
-            <select name="paiement" required>
-              <option>Espèces</option>
-              <option>Carte</option>
-              <option>Carte+</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="actions-form">
-          <button type="submit" class="btn btn-principal" id="btn-valider-prive">Ajouter la course</button>
-          <button type="button" class="btn btn-secondaire" id="btn-annuler-prive" hidden>Annuler la modification</button>
-        </div>
-      </form>
-
-      <div class="carte">
-        <div class="nav-jour">
-          <button type="button" class="btn-rond" data-jour="-1" aria-label="Jour précédent">‹</button>
-          <input type="date" class="choix-jour" aria-label="Jour affiché">
-          <button type="button" class="btn-rond" data-jour="1" aria-label="Jour suivant">›</button>
-        </div>
-        <div class="totaux" id="totaux-prive"></div>
-        <ul class="liste" id="liste-prive"></ul>
-        <button type="button" class="btn btn-secondaire btn-csv" data-csv="prive">Exporter l'onglet Privé (CSV)</button>
+  <!-- ===================== FEUILLE DU JOUR (écran d'accueil) ===================== -->
+  <div id="accueil">
+    <header class="entete">
+      <div class="nav-date">
+        <button type="button" class="fleche" id="jour-precedent" aria-label="Jour précédent">‹</button>
+        <button type="button" class="titre-date" id="titre-date" aria-label="Revenir à aujourd'hui"></button>
+        <button type="button" class="fleche" id="jour-suivant" aria-label="Jour suivant">›</button>
       </div>
-    </section>
+      <button type="button" class="btn-icone" id="btn-reglages" aria-label="Réglages">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>
+        </svg>
+      </button>
+    </header>
+    <p class="sous-date" id="sous-date"></p>
 
-    <!-- ===================== ONGLET MÉDICAL ===================== -->
-    <section id="onglet-medical" class="onglet" data-onglet="medical" hidden>
-      <form id="form-medical" class="carte formulaire" autocomplete="off">
-        <h2 id="titre-form-medical">Nouvelle course médicale</h2>
+    <main class="feuille">
+      <section class="resume">
+        <div class="total" id="total-jour"></div>
+        <div class="detail-total" id="detail-total"></div>
+      </section>
+      <ul class="liste-jour" id="liste-jour"></ul>
+    </main>
 
+    <button type="button" class="fab" id="btn-ajouter" aria-label="Ajouter une course">+</button>
+  </div>
+
+  <!-- ===================== FORMULAIRE PRIVÉ ===================== -->
+  <section class="ecran" id="ecran-prive" hidden>
+    <div class="barre-ecran">
+      <button type="button" class="btn-texte" data-fermer-ecran>Annuler</button>
+      <h2 id="titre-form-prive">Course privée</h2>
+      <span class="barre-espace"></span>
+    </div>
+
+    <form id="form-prive" class="formulaire" autocomplete="off">
+      <div class="ligne-2">
         <label>Date
           <input type="date" name="date" required>
         </label>
-
-        <label>Nom / Prénom
-          <input type="text" name="nom" autocapitalize="words" required>
+        <label>Heure
+          <input type="time" name="heure" required>
         </label>
-
-        <label>Téléphone
-          <input type="tel" name="telephone" inputmode="tel" placeholder="06 12 34 56 78">
-        </label>
-
-        <div class="champ-adresse">
-          <label for="adresse-depart">Adresse client</label>
-          <input type="text" name="adresseDepart" id="adresse-depart" placeholder="Adresse ou lieu (ex. hôpital Pasteur)" autocomplete="off">
-        </div>
-
-        <div class="champ-adresse">
-          <label for="adresse-arrivee">Adresse d'arrivée</label>
-          <input type="text" name="adresseArrivee" id="adresse-arrivee" placeholder="Adresse ou lieu (ex. hôpital Pasteur)" autocomplete="off">
-        </div>
-
-        <div class="ligne-2">
-          <label>Trajet
-            <select name="trajet">
-              <option>Aller</option>
-              <option>Aller/Retour</option>
-              <option>Retour</option>
-            </select>
-          </label>
-          <label>Km (un trajet)
-            <input type="text" name="km" inputmode="decimal" placeholder="0">
-          </label>
-        </div>
-        <p class="info-km" id="info-km"></p>
-
-        <div class="ligne-2">
-          <label>Prise en charge
-            <select name="priseEnCharge">
-              <option>Consultation</option>
-              <option>HDJ</option>
-            </select>
-          </label>
-          <label>Prix (€)
-            <input type="text" name="prix" inputmode="decimal" placeholder="0,00">
-          </label>
-        </div>
-
-        <div class="actions-form">
-          <button type="submit" class="btn btn-principal" id="btn-valider-medical">Ajouter la course</button>
-          <button type="button" class="btn btn-secondaire" id="btn-annuler-medical" hidden>Annuler la modification</button>
-        </div>
-      </form>
-
-      <div class="carte">
-        <div class="nav-jour">
-          <button type="button" class="btn-rond" data-jour="-1" aria-label="Jour précédent">‹</button>
-          <input type="date" class="choix-jour" aria-label="Jour affiché">
-          <button type="button" class="btn-rond" data-jour="1" aria-label="Jour suivant">›</button>
-        </div>
-        <div class="totaux" id="totaux-medical"></div>
-        <ul class="liste" id="liste-medical"></ul>
-        <button type="button" class="btn btn-secondaire btn-csv" data-csv="medical">Exporter l'onglet Médical (CSV)</button>
       </div>
-    </section>
-  </main>
 
-  <!-- Barre d'onglets en bas de l'écran -->
-  <nav class="barre-onglets">
-    <button type="button" class="onglet-btn actif" data-cible="prive">Privé</button>
-    <button type="button" class="onglet-btn" data-cible="medical">Médical</button>
-  </nav>
+      <label>Station
+        <select name="station" required>
+          <option>Gare</option>
+          <option>Mairie</option>
+          <option>Palais</option>
+          <option>Majestic</option>
+          <option>Marriott</option>
+          <option>Carlton</option>
+          <option>Martinez</option>
+          <option>Palm Beach</option>
+          <option>Baoli</option>
+        </select>
+      </label>
 
-  <!-- Fenêtre Sauvegarde -->
-  <dialog id="dlg-sauvegarde">
-    <h2>Sauvegarde</h2>
-    <p class="texte-doux">Vos données restent uniquement sur ce téléphone. Faites une sauvegarde régulièrement (par exemple chaque semaine) et rangez le fichier dans « Fichiers » ou iCloud.</p>
-    <button type="button" class="btn btn-principal" id="btn-export-json">Exporter toutes les données (JSON)</button>
-    <button type="button" class="btn btn-secondaire" id="btn-import-json">Restaurer depuis un fichier…</button>
-    <input type="file" id="fichier-import" accept=".json,application/json" hidden>
-    <button type="button" class="btn btn-secondaire" data-csv="prive">Exporter Privé (CSV)</button>
-    <button type="button" class="btn btn-secondaire" data-csv="medical">Exporter Médical (CSV)</button>
-    <button type="button" class="btn btn-fermer" id="btn-fermer-dlg">Fermer</button>
+      <div class="ligne-2">
+        <label>Prix (€)
+          <input type="text" name="prix" inputmode="decimal" placeholder="0,00" required>
+        </label>
+        <label>Paiement
+          <select name="paiement" required>
+            <option>Espèces</option>
+            <option>Carte</option>
+            <option>Carte+</option>
+          </select>
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-principal" id="btn-valider-prive">Ajouter la course</button>
+      <button type="button" class="btn btn-danger" id="btn-supprimer-prive" hidden>Supprimer la course</button>
+    </form>
+  </section>
+
+  <!-- ===================== FORMULAIRE MÉDICAL ===================== -->
+  <section class="ecran" id="ecran-medical" hidden>
+    <div class="barre-ecran">
+      <button type="button" class="btn-texte" data-fermer-ecran>Annuler</button>
+      <h2 id="titre-form-medical">Course médicale</h2>
+      <span class="barre-espace"></span>
+    </div>
+
+    <form id="form-medical" class="formulaire" autocomplete="off">
+      <div class="ligne-2">
+        <label>Date
+          <input type="date" name="date" required>
+        </label>
+        <label>Heure
+          <input type="time" name="heure" required>
+        </label>
+      </div>
+
+      <label>Nom / Prénom
+        <input type="text" name="nom" autocapitalize="words" required>
+      </label>
+
+      <label>Téléphone
+        <input type="tel" name="telephone" inputmode="tel" placeholder="06 12 34 56 78">
+      </label>
+
+      <div class="champ-adresse">
+        <label for="adresse-depart">Adresse client</label>
+        <input type="text" name="adresseDepart" id="adresse-depart" placeholder="Adresse ou lieu (ex. hôpital Pasteur)" autocomplete="off">
+      </div>
+
+      <div class="champ-adresse">
+        <label for="adresse-arrivee">Adresse d'arrivée</label>
+        <input type="text" name="adresseArrivee" id="adresse-arrivee" placeholder="Adresse ou lieu (ex. hôpital Pasteur)" autocomplete="off">
+      </div>
+
+      <div class="ligne-2">
+        <label>Trajet
+          <select name="trajet">
+            <option>Aller</option>
+            <option>Aller/Retour</option>
+            <option>Retour</option>
+          </select>
+        </label>
+        <label>Km (un trajet)
+          <input type="text" name="km" inputmode="decimal" placeholder="0">
+        </label>
+      </div>
+      <p class="info-km" id="info-km"></p>
+
+      <div class="ligne-2">
+        <label>Prise en charge
+          <select name="priseEnCharge">
+            <option>Consultation</option>
+            <option>HDJ</option>
+          </select>
+        </label>
+        <label>Prix (€)
+          <input type="text" name="prix" inputmode="decimal" placeholder="0,00">
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-principal" id="btn-valider-medical">Ajouter la course</button>
+      <button type="button" class="btn btn-danger" id="btn-supprimer-medical" hidden>Supprimer la course</button>
+    </form>
+  </section>
+
+  <!-- ===================== PANNEAU « + » ===================== -->
+  <dialog class="panneau" id="panneau-ajout">
+    <h2>Nouvelle course</h2>
+    <div class="choix-type">
+      <button type="button" class="choix" data-nouvelle="prive">
+        <span class="choix-lettre">P</span>Privé
+      </button>
+      <button type="button" class="choix" data-nouvelle="medical">
+        <span class="choix-lettre choix-lettre-m">M</span>Médical
+      </button>
+    </div>
+    <button type="button" class="btn btn-fermer" data-fermer-panneau>Annuler</button>
   </dialog>
 
+  <!-- ===================== RÉGLAGES ===================== -->
+  <dialog class="panneau" id="dlg-reglages">
+    <h2>Réglages</h2>
+
+    <h3>Sauvegarde</h3>
+    <p class="texte-doux">Vos données restent uniquement sur ce téléphone. Faites une sauvegarde régulièrement (par exemple chaque semaine) et rangez le fichier dans « Fichiers » ou iCloud.</p>
+    <button type="button" class="btn btn-secondaire" id="btn-export-json">Exporter toutes les données</button>
+    <button type="button" class="btn btn-secondaire" id="btn-import-json">Restaurer depuis un fichier…</button>
+    <input type="file" id="fichier-import" accept=".json,application/json" hidden>
+
+    <h3>Export pour Excel (CSV)</h3>
+    <div class="ligne-2">
+      <button type="button" class="btn btn-secondaire" data-csv="prive">Privé</button>
+      <button type="button" class="btn btn-secondaire" data-csv="medical">Médical</button>
+    </div>
+
+    <button type="button" class="btn btn-fermer" data-fermer-panneau>Fermer</button>
+  </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 

@@ -7,9 +7,9 @@ Application web installable sur iPhone, qui fonctionne hors ligne. Les données 
 
 | Fichier | Rôle |
 |---|---|
-| `index.html` | La page : formulaires, listes, onglets |
+| `index.html` | La page : feuille du jour, bouton +, formulaires, réglages |
 | `css/style.css` | L'apparence (thème sombre, gros boutons) |
-| `js/app.js` | Le fonctionnement : ajout, modification, totaux, sauvegarde, CSV |
+| `js/app.js` | Le fonctionnement : feuille du jour, ajout, modification, sauvegarde, CSV |
 | `js/db.js` | Le stockage local sur le téléphone (IndexedDB) |
 | `js/adresses.js` | Liste de suggestions, adresses et km par la route (services IGN gratuits) |
 | `js/recherche-lieux.js` | Recherche de lieux par leur nom : 🏥 établissements, 🌐 lieux en ligne |
@@ -30,7 +30,16 @@ Services externes utilisés (gratuits, sans clé, publics) :
 
 Seul le texte tapé dans les champs adresse est envoyé à ces services. Aucun nom ni téléphone de client n'est envoyé.
 
-## Suggestions d'adresses (onglet Médical)
+## Utilisation
+
+- **Écran d'accueil = la feuille du jour** : total du jour, détail Privé / Médical, toutes les courses triées par heure (P = privé, M = médical).
+- Flèches ‹ › : jour précédent / suivant. Toucher la date : retour à aujourd'hui.
+- Toucher une course : la modifier ou la supprimer.
+- Bouton **+** : nouvelle course Privé ou Médical (la date proposée est celle du jour affiché).
+- Roue dentée en haut à droite : sauvegarde, restauration, export CSV.
+- Les anciennes courses médicales sans heure sont classées à l'heure où elles ont été saisies.
+
+## Suggestions d'adresses (formulaire Médical)
 
 Ordre d'affichage : 🏥 établissements de santé, 📍 adresses, 🌐 lieux en ligne.
 - La recherche ignore majuscules et accents, accepte les mots dans le désordre et les débuts de mots :
