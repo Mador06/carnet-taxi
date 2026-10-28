@@ -13,7 +13,7 @@ Application web installable sur iPhone, qui fonctionne hors ligne. Les données 
 | `js/db.js` | Le stockage local sur le téléphone (IndexedDB) |
 | `js/adresses.js` | Liste de suggestions, adresses et km par la route (services IGN gratuits) |
 | `js/recherche-lieux.js` | Recherche de lieux par leur nom : 🏥 établissements, 🌐 lieux en ligne |
-| `data/etablissements-06.json` | Les établissements de santé du 06 (tirés du fichier officiel FINESS) |
+| `data/etablissements.json` | Les établissements de santé du 06, et les hôpitaux/cliniques du 83 et du 13 (fichier officiel FINESS) |
 | `js/tarif-medical.js` | **Le futur calcul du prix médical** (vide pour l'instant) |
 | `sw.js` | Le « service worker » : permet d'ouvrir l'app sans réseau |
 | `manifest.json` | La carte d'identité de l'app (nom, icône, plein écran) |
@@ -46,6 +46,8 @@ Seul le texte tapé dans les champs adresse est envoyé à ces services. Aucun n
 ## Suggestions d'adresses (formulaire Médical)
 
 Ordre d'affichage : 🏥 établissements de santé, 📍 adresses, 🌐 lieux en ligne.
+- 🏥 = tous les établissements du 06, plus les hôpitaux, cliniques, SSR, centres de cancérologie et de dialyse du 83 et du 13 (ex. « timone », « sainte musse », « hopital nord », « frejus »). Les plus proches de Cannes passent en premier.
+- 📍 adresses : le 06 d'abord, puis le 83 et le 13.
 - La recherche ignore majuscules et accents, accepte les mots dans le désordre et les débuts de mots :
   « hop pasteur », « clinique st jean », « CH cannes », « dialyse antibes ».
 - 🏥 marche **sans réseau**. Taper une adresse affiche aussi les établissements situés à cette adresse.
@@ -54,7 +56,7 @@ Ordre d'affichage : 🏥 établissements de santé, 📍 adresses, 🌐 lieux en
 ### Mettre à jour la liste des établissements (tous les 2-3 mois)
 Le fichier FINESS est publié environ tous les 2 mois sur data.gouv.fr.
 1. Double-cliquez sur **`mettre-a-jour-etablissements.bat`** (environ 10 secondes, 50 Mo téléchargés).
-2. Renvoyez le fichier `data/etablissements-06.json` sur GitHub.
+2. Renvoyez le fichier `data/etablissements.json` sur GitHub.
 
 Pour garder d'autres catégories (ex. pharmacies), ajoutez leur code dans la liste `$categories`
 en haut de `outils/maj-etablissements.ps1`.

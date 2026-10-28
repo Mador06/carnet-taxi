@@ -11,8 +11,9 @@
 const URL_GEOCODAGE = 'https://data.geopf.fr/geocodage/search';
 const URL_ITINERAIRE = 'https://data.geopf.fr/navigation/itineraire';
 const CANNES = { lat: 43.5528, lon: 7.0174 };
+const DEPARTEMENTS_PROCHES = ['06', '83', '13'];   // ordre d'affichage des adresses
 
-// 📍 Cherche des adresses qui commencent par "texte", en favorisant Cannes et le 06
+// 📍 Cherche des adresses qui commencent par "texte", en favorisant Cannes, le 06, puis le 83 et le 13
 async function chercherAdresses(texte, signal, nombre = 4) {
   const params = new URLSearchParams({
     q: texte,
@@ -36,10 +37,16 @@ async function chercherAdresses(texte, signal, nombre = 4) {
       departement: p.depcode || String(p.postcode || '').slice(0, 2)
     };
   });
-  // Les adresses des Alpes-Maritimes passent en premier
-  const du06 = resultats.filter(r => r.departement === '06');
-  const autres = resultats.filter(r => r.departement !== '06');
-  return du06.concat(autres).slice(0, nombre);
+  // 06 d'abord, puis 83 et 13, puis le reste de la France
+  const rang = r => {
+    const i = DEPARTEMENTS_PROCHES.indexOf(r.departement);
+    return i === -1 ? DEPARTEMENTS_PROCHES.length : i;
+  };
+  return resultats
+    .map((r, ordre) => ({ r, ordre }))
+    .sort((a, b) => rang(a.r) - rang(b.r) || a.ordre - b.ordre)
+    .map(x => x.r)
+    .slice(0, nombre);
 }
 
 // Distance en km par la route (voiture) entre deux points {lat, lon}
@@ -166,9 +173,9 @@ function brancherSuggestions(champ, quandChoisi) {
         locaux.length ? [] : chercherLieuxEnLigne(texte, signal).catch(() => [])
       ]);
       if (n !== numero) return;
-      // Adresses hors du 06 : seulement s'il n'y a rien de mieux
+      // Adresses hors du 06, du 83 et du 13 : seulement s'il n'y a rien de mieux
       const rienDautre = locaux.length === 0 && enLigne.length === 0;
-      const adressesUtiles = rienDautre ? adresses : adresses.filter(a => a.departement === '06');
+      const adressesUtiles = rienDautre ? adresses : adresses.filter(a => DEPARTEMENTS_PROCHES.includes(a.departement));
       afficher([...locaux, ...adressesUtiles, ...enLigne], enLigne.length > 0);
     }, 250);
   });

@@ -1,14 +1,15 @@
 /* ============================================================
    recherche-lieux.js – recherche de lieux par leur nom
-   1. 🏥 Établissements de santé du 06 (fichier FINESS inclus dans l'app)
+   1. 🏥 Établissements de santé du 06, hôpitaux et cliniques du 83 et du 13
+      (fichier FINESS inclus dans l'app ; les plus proches de Cannes d'abord)
    2. 🌐 Lieux en ligne (Photon / OpenStreetMap), seulement si 1 ne trouve rien
    Recherche tolérante : sans majuscules ni accents, mots dans le désordre,
    mots partiels ("hop past"), abréviations (CH, CHU, St, Ste…).
    ============================================================ */
 
-const URL_ETABLISSEMENTS = 'data/etablissements-06.json';
+const URL_ETABLISSEMENTS = 'data/etablissements.json';
 const URL_PHOTON = 'https://photon.komoot.io/api/';
-const ZONE_ALPES_MARITIMES = '6.63,43.47,7.72,44.37';   // ouest, sud, est, nord
+const ZONE_RECHERCHE = '4.23,42.98,7.72,44.37';   // 06, 83 et 13 : ouest, sud, est, nord
 
 /* ---------- Normalisation du texte ---------- */
 
@@ -27,6 +28,9 @@ const EQUIVALENTS = {
   chu: ['centre', 'hospitalier', 'universitaire', 'hopital'],
   chr: ['centre', 'hospitalier', 'regional', 'hopital'],
   chs: ['centre', 'hospitalier', 'specialise', 'hopital', 'psychiatrique'],
+  chi: ['centre', 'hospitalier', 'intercommunal', 'hopital'],
+  chits: ['centre', 'hospitalier', 'toulon', 'seyne', 'hopital'],
+  aphm: ['assistance', 'publique', 'marseille', 'hopital'],
   hp: ['hopital', 'prive'],
   hj: ['hopital', 'jour'],
   hop: ['hopital'],
@@ -179,7 +183,7 @@ async function chercherLieuxEnLigne(texte, signal) {
     lon: CANNES.lon,
     lang: 'fr',
     limit: '10',
-    bbox: ZONE_ALPES_MARITIMES
+    bbox: ZONE_RECHERCHE
   });
   const rep = await fetch(`${URL_PHOTON}?${params}`, { signal });
   if (!rep.ok) throw new Error('Photon indisponible (' + rep.status + ')');

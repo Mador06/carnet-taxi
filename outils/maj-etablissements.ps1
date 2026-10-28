@@ -1,19 +1,25 @@
 ﻿# ============================================================
 # maj-etablissements.ps1
-# Met à jour data/etablissements-06.json à partir du fichier
+# Met à jour data/etablissements.json à partir du fichier
 # FINESS officiel (data.gouv.fr, Licence Ouverte).
+# 06 : tous les établissements utiles au taxi.
+# Départements voisins (83, 13) : hôpitaux et cliniques seulement.
 # Lancement : double-cliquez sur "mettre-a-jour-etablissements.bat".
 # Rien à installer : utilise uniquement Windows PowerShell.
 # ============================================================
 
-param([string]$Departement = '06')
+param(
+  [string]$Departement = '06',                 # département principal : toutes les catégories
+  [string[]]$Voisins = @('83', '13')           # départements voisins : hôpitaux et cliniques
+)
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $racine = Split-Path $PSScriptRoot -Parent
-$sortie = Join-Path $racine "data\etablissements-$Departement.json"
+$sortie = Join-Path $racine "data\etablissements.json"
+$departements = @($Departement) + $Voisins
 $culture = [Globalization.CultureInfo]::InvariantCulture
 
 # ---------- Catégories FINESS gardées (code -> nom affiché) ----------
@@ -41,6 +47,10 @@ $categories = @{
   '126' = 'Thermes'
 }
 
+# Catégories gardées pour les départements voisins
+$categoriesVoisins = @('Hôpital', 'Hôpital psychiatrique', 'Clinique psychiatrique', 'Clinique',
+  'Soins de suite (SSR)', 'Cancérologie', 'Dialyse')
+
 # ---------- Abréviations des types de voie ----------
 $typesVoie = @{
   'AV' = 'Avenue'; 'R' = 'Rue'; 'BD' = 'Boulevard'; 'CHE' = 'Chemin'; 'CHEM' = 'Chemin'
@@ -57,7 +67,7 @@ $complementsNumero = @{ 'B' = 'bis'; 'T' = 'ter'; 'Q' = 'quater' }
 # ---------- Mise en forme des noms (MAJUSCULES -> Majuscules) ----------
 $sigles = @('CH','CHU','CHR','CHS','HP','HJ','CMP','CMPP','CSAPA','EHPAD','UDM','IME','MAS','FAM','SSR',
   'MSP','CPTS','IRC','UAD','FSEF','E3S','AGAHTIR','IUFC','CATTP','ESAT','SELARL','SELAS','SAS','SARL',
-  'LBM','EFS','PACA','IEM','SAMSAH','SSIAD','USLD','HPNCL','CTRE','ZI','ZA','ZAC','CEDEX','BP','CS','UGECAM','ORSAC','ARS')
+  'LBM','EFS','PACA','APHM','AP-HM','CHI','CHITS','ADPC','IEM','SAMSAH','SSIAD','USLD','HPNCL','CTRE','ZI','ZA','ZAC','CEDEX','BP','CS','UGECAM','ORSAC','ARS')
 $petitsMots = @('de','du','des','la','le','les','et','en','sur','sous','a','au','aux')
 
 function Mettre-EnForme([string]$texte, [switch]$Suite) {
@@ -122,8 +132,9 @@ if (($lignes[0..2000] -join "`n").Contains([char]0xFFFD)) {
 # Coordonnées : lignes "geolocalisation;numero;X;Y;source...;date"
 $coordonnees = @{}
 foreach ($ligne in $lignes) {
-  if (-not $ligne.StartsWith("geolocalisation;$Departement")) { continue }
+  if (-not $ligne.StartsWith('geolocalisation;')) { continue }
   $c = $ligne.Split(';')
+  if ($departements -notcontains $c[1].Substring(0, 2)) { continue }
   if ($c.Count -ge 5 -and $c[4] -match 'EPSG:2154' -and $c[2] -and $c[3]) {
     $coordonnees[$c[1]] = Lambert93-VersGPS ([double]::Parse($c[2], $culture)) ([double]::Parse($c[3], $culture))
   }
@@ -134,9 +145,10 @@ $etablissements = New-Object System.Collections.ArrayList
 foreach ($ligne in $lignes) {
   if (-not $ligne.StartsWith('structureet;')) { continue }
   $c = $ligne.Split(';')
-  if ($c.Count -lt 22 -or $c[13] -ne $Departement) { continue }
+  if ($c.Count -lt 22 -or $departements -notcontains $c[13]) { continue }
   $categorie = $categories[$c[18]]
   if (-not $categorie) { continue }
+  if ($c[13] -ne $Departement -and $categoriesVoisins -notcontains $categorie) { continue }
   if ($c[3] -match 'SMUR' -or $c[4] -match 'SMUR') { continue }   # antennes SMUR : pas des lieux d'accueil
 
   $nomCourt = Mettre-EnForme $c[3]
@@ -154,7 +166,7 @@ foreach ($ligne in $lignes) {
   $ville = Mettre-EnForme (($acheminement -replace '^\d{5}\s*', '') -replace '\s+CEDEX.*$', '')
   if ($acheminement -notmatch 'CEDEX' -and $acheminement -match '^(\d{5})') { $ville = $matches[1] + ' ' + $ville }
 
-  $e = [ordered]@{ id = $c[1]; n = $nom }
+  $e = [ordered]@{ id = $c[1]; d = $c[13]; n = $nom }
   if ($nomCourt -ne $nom) { $e.a = $nomCourt }
   if ($c[5]) { $e.cpl = Mettre-EnForme $c[5] }
   $e.c = $categorie
@@ -169,7 +181,7 @@ $resultat = [ordered]@{
   source = 'FINESS - data.gouv.fr (Licence Ouverte Etalab)'
   fichier = $ressource.title
   genereLe = (Get-Date -Format 'yyyy-MM-dd')
-  departement = $Departement
+  departements = $departements
   etablissements = $etablissements
 }
 New-Item -ItemType Directory -Force (Split-Path $sortie) | Out-Null
@@ -180,5 +192,7 @@ Remove-Item $temporaire -ErrorAction SilentlyContinue
 Write-Host ""
 Write-Host ("Terminé : {0} établissements écrits dans {1}" -f $etablissements.Count, $sortie) -ForegroundColor Green
 Write-Host ("  dont {0} sans coordonnées GPS" -f @($etablissements | Where-Object { -not $_.Contains('lat') }).Count)
+$etablissements | Group-Object { $_.d } | Sort-Object Name |
+  ForEach-Object { Write-Host ("  {0,4}  département {1}" -f $_.Count, $_.Name) }
 $etablissements | Group-Object { $_.c } | Sort-Object Count -Descending |
   ForEach-Object { Write-Host ("  {0,4}  {1}" -f $_.Count, $_.Name) }
