@@ -11,6 +11,7 @@ Application web installable sur iPhone, qui fonctionne hors ligne. Les données 
 | `css/style.css` | L'apparence (thème sombre, gros boutons) |
 | `js/app.js` | Le fonctionnement : feuille du jour, ajout, modification, sauvegarde, CSV |
 | `js/db.js` | Le stockage local sur le téléphone (IndexedDB) |
+| `js/patients.js` | Les fiches patients : doublons, habitudes (valeurs les plus fréquentes) |
 | `js/adresses.js` | Liste de suggestions, adresses et km par la route (services IGN gratuits) |
 | `js/recherche-lieux.js` | Recherche de lieux par leur nom : 🏥 établissements, 🌐 lieux en ligne |
 | `data/etablissements.json` | Les établissements de santé du 06, et les hôpitaux/cliniques du 83 et du 13 (fichier officiel FINESS) |
@@ -42,6 +43,15 @@ Seul le texte tapé dans les champs adresse est envoyé à ces services. Aucun n
 - Les anciennes courses médicales sans heure sont classées à l'heure où elles ont été saisies.
 - **Bon de transport (Médical)** : case « J'ai » ; si elle n'est pas cochée, un champ « Nom du taxi » apparaît à côté (collègues proposés). Sur la feuille : « ⚠ Sans bon » ou « ⚠ Bon : nom du taxi ». Les anciennes courses médicales, sans cette case, comptent comme « sans bon » jusqu'à ce qu'on la coche.
 - **Filtre ⚠ Bons manquants** (en haut de la feuille) : toutes les courses Médical et Médical donné sans bon, tous jours confondus, groupées par date. Toucher les pastilles Médical / Donné pour n'afficher qu'un type. Le chiffre orange = nombre de bons à récupérer.
+
+## Fiches patients (Médical)
+
+- **Création automatique** : chaque course médicale enregistrée crée ou met à jour la fiche du patient (téléphone, adresse client, destination, trajet et prise en charge habituels, nombre de courses, dernière course, destinations déjà utilisées). « Habituel » = la valeur la plus fréquente sur ses courses.
+- **Même patient** si le nom correspond (sans majuscules, accents ni espaces, dans n'importe quel ordre : « Jean Dupont » = « DUPONT jean ») ou si le téléphone est identique. Même nom avec un autre numéro : l'app demande (OK = même personne, Annuler = nouvelle fiche).
+- **Formulaire Médical** : dès 2 lettres dans « Nom / Prénom », les patients connus sont proposés (👤). En choisir un remplit téléphone, adresses, trajet et prise en charge, et lance le calcul des km. Tout reste modifiable. Dans « Adresse d'arrivée », ses autres destinations (🕘) passent en premier.
+- **Médical donné** : les patients connus sont aussi proposés dans « Nom / Prénom du patient ».
+- **Réglages → Mes patients** : liste triée par dernière course, recherche, fiche modifiable, bouton Appeler, historique des courses. Supprimer une fiche ne supprime pas les courses.
+- À l'installation de cette version, les fiches sont créées à partir des courses médicales déjà enregistrées (même nom ou même téléphone = même fiche, sans question). Une ancienne sauvegarde restaurée recrée aussi les fiches.
 
 ## Suggestions d'adresses (formulaire Médical)
 

@@ -74,18 +74,20 @@ async function calculerDistanceRoute(depart, arrivee) {
   }
 }
 
-const ICONES = { etablissement: '🏥', adresse: '📍', lieu: '🌐' };
+const ICONES = { habitude: '🕘', etablissement: '🏥', adresse: '📍', lieu: '🌐' };
 
 // Texte écrit dans le champ quand on choisit une suggestion
 function texteDuChamp(suggestion) {
-  if (suggestion.type === 'adresse') return suggestion.adresse;
+  if (suggestion.type === 'adresse' || suggestion.type === 'habitude') return suggestion.adresse;
   return suggestion.adresse ? `${suggestion.nom} — ${suggestion.adresse}` : suggestion.nom;
 }
 
 // Ajoute la liste de suggestions sous un champ texte.
 // quandChoisi(coordonnees) est appelé avec {lat, lon}, ou null si l'adresse
 // a été retapée à la main (on n'a alors plus de coordonnées fiables).
-function brancherSuggestions(champ, quandChoisi) {
+// prioritaires(texte) : suggestions à montrer en premier (ex. 🕘 destinations
+// déjà utilisées par le patient), y compris quand on entre dans le champ.
+function brancherSuggestions(champ, quandChoisi, prioritaires = () => []) {
   const liste = document.createElement('ul');
   liste.className = 'suggestions';
   liste.hidden = true;
@@ -148,12 +150,24 @@ function brancherSuggestions(champ, quandChoisi) {
     }
   }
 
+  // En entrant dans le champ : les suggestions prioritaires, s'il y en a
+  champ.addEventListener('focus', () => {
+    const premieres = prioritaires('');
+    if (premieres.length) afficher(premieres, false);
+  });
+
   champ.addEventListener('input', () => {
     definirAdresse(champ, null, true);
     quandChoisi(null);
     clearTimeout(minuteur);
     const texte = champ.value.trim();
-    if (texte.length < 3) { numero++; fermer(); return; }
+    const premieres = prioritaires(texte);
+    if (texte.length < 3) {
+      numero++;
+      if (premieres.length) afficher(premieres, false);
+      else fermer();
+      return;
+    }
 
     // On attend que la frappe se calme avant de chercher
     minuteur = setTimeout(async () => {
@@ -165,7 +179,7 @@ function brancherSuggestions(champ, quandChoisi) {
       // 1. Tout de suite : 🏥 établissements (marche hors ligne)
       const locaux = await chercherLieuxLocaux(texte);
       if (n !== numero) return;
-      afficher(locaux, false);
+      afficher([...premieres, ...locaux], false);
 
       // 2. Puis, si réseau : 📍 adresses, et 🌐 lieux en ligne seulement si rien en local
       const [adresses, enLigne] = await Promise.all([
@@ -176,7 +190,7 @@ function brancherSuggestions(champ, quandChoisi) {
       // Adresses hors du 06, du 83 et du 13 : seulement s'il n'y a rien de mieux
       const rienDautre = locaux.length === 0 && enLigne.length === 0;
       const adressesUtiles = rienDautre ? adresses : adresses.filter(a => DEPARTEMENTS_PROCHES.includes(a.departement));
-      afficher([...locaux, ...adressesUtiles, ...enLigne], enLigne.length > 0);
+      afficher([...premieres, ...locaux, ...adressesUtiles, ...enLigne], enLigne.length > 0);
     }, 250);
   });
 

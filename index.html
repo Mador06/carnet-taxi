@@ -144,9 +144,11 @@
         </label>
       </div>
 
-      <label>Nom / Prénom
-        <input type="text" name="nom" autocapitalize="words" required>
-      </label>
+      <!-- Les patients connus sont proposés pendant la frappe -->
+      <div class="champ-adresse">
+        <label for="nom-medical">Nom / Prénom</label>
+        <input type="text" name="nom" id="nom-medical" autocapitalize="words" autocomplete="off" required>
+      </div>
 
       <label>Téléphone
         <input type="tel" name="telephone" inputmode="tel" placeholder="06 12 34 56 78">
@@ -216,9 +218,10 @@
     </div>
 
     <form id="form-donne" class="formulaire" autocomplete="off">
-      <label>Nom / Prénom du patient
-        <input type="text" name="nom" autocapitalize="words" required>
-      </label>
+      <div class="champ-adresse">
+        <label for="nom-donne">Nom / Prénom du patient</label>
+        <input type="text" name="nom" id="nom-donne" autocapitalize="words" autocomplete="off" required>
+      </div>
 
       <div class="ligne-2">
         <label>Date
@@ -289,6 +292,79 @@
     <ul class="liste-stats" id="stats-paiements"></ul>
   </section>
 
+  <!-- ===================== MES PATIENTS ===================== -->
+  <section class="ecran" id="ecran-patients" hidden>
+    <div class="barre-ecran">
+      <button type="button" class="btn-texte" data-fermer-ecran>‹ Retour</button>
+      <h2>Mes patients</h2>
+      <span class="barre-espace"></span>
+    </div>
+    <input type="search" class="champ-recherche" id="recherche-patient" placeholder="Rechercher (nom, téléphone, adresse)" autocomplete="off" aria-label="Rechercher un patient">
+    <ul class="liste-patients" id="liste-patients"></ul>
+  </section>
+
+  <!-- ===================== FICHE PATIENT ===================== -->
+  <section class="ecran" id="ecran-fiche" hidden>
+    <div class="barre-ecran">
+      <button type="button" class="btn-texte" id="retour-patients">‹ Patients</button>
+      <h2>Fiche patient</h2>
+      <span class="barre-espace"></span>
+    </div>
+
+    <div class="entete-fiche">
+      <div class="avatar" id="fiche-initiales"></div>
+      <div class="entete-fiche-texte">
+        <strong id="fiche-titre"></strong>
+        <small id="fiche-resume"></small>
+      </div>
+    </div>
+    <a class="lien-appel" id="fiche-appel" hidden></a>
+
+    <form id="form-fiche" class="formulaire" autocomplete="off">
+      <label>Nom / Prénom
+        <input type="text" name="nom" autocapitalize="words" required>
+      </label>
+      <label>Téléphone
+        <input type="tel" name="telephone" id="fiche-tel" inputmode="tel" placeholder="06 12 34 56 78">
+      </label>
+      <div class="champ-adresse">
+        <label for="fiche-adresse">Adresse client</label>
+        <input type="text" name="adresse" id="fiche-adresse" placeholder="Adresse ou lieu" autocomplete="off">
+      </div>
+      <div class="champ-adresse">
+        <label for="fiche-destination">Destination habituelle</label>
+        <input type="text" name="destination" id="fiche-destination" placeholder="Adresse ou lieu" autocomplete="off">
+      </div>
+      <div class="ligne-2">
+        <label>Trajet habituel
+          <select name="trajet">
+            <option value="">—</option>
+            <option>Aller</option>
+            <option>Aller/Retour</option>
+            <option>Retour</option>
+          </select>
+        </label>
+        <label>Prise en charge
+          <select name="priseEnCharge">
+            <option value="">—</option>
+            <option>Consultation</option>
+            <option>HDJ</option>
+          </select>
+        </label>
+      </div>
+      <p class="texte-doux note-fiche">Les habitudes se recalculent à chaque nouvelle course (valeur la plus fréquente).</p>
+      <button type="submit" class="btn btn-principal">Enregistrer la fiche</button>
+    </form>
+
+    <h3 class="titre-section" id="titre-destinations">Destinations déjà utilisées</h3>
+    <ul class="liste-stats" id="fiche-destinations"></ul>
+
+    <h3 class="titre-section">Historique des courses</h3>
+    <ul class="liste-jour" id="fiche-historique"></ul>
+
+    <button type="button" class="btn btn-danger" id="btn-supprimer-fiche">Supprimer la fiche</button>
+  </section>
+
   <!-- ===================== PANNEAU « + » ===================== -->
   <dialog class="panneau" id="panneau-ajout">
     <h2>Nouvelle course</h2>
@@ -326,6 +402,10 @@
     </div>
     <button type="button" class="btn btn-secondaire" data-csv="donne">Médical donné</button>
 
+    <h3>Mes patients</h3>
+    <p class="texte-doux">Fiches créées automatiquement à chaque course médicale.</p>
+    <button type="button" class="btn btn-secondaire" id="btn-mes-patients">Voir mes patients</button>
+
     <h3>Mes collègues taxi</h3>
     <p class="texte-doux">Mémorisés automatiquement quand vous donnez une course.</p>
     <ul class="liste-collegues" id="liste-collegues"></ul>
@@ -336,6 +416,7 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="js/db.js"></script>
+  <script src="js/patients.js"></script>
   <script src="js/recherche-lieux.js"></script>
   <script src="js/adresses.js"></script>
   <script src="js/tarif-medical.js"></script>

@@ -5,15 +5,16 @@
    télécharge la nouvelle version en arrière-plan.
    Les services en ligne (IGN, Photon) ne sont jamais mis en mémoire.
    Quand on change un fichier de l'app : changer le numéro de CACHE
-   (v10 -> v11…) pour que les téléphones reprennent tous les fichiers.
+   (v11 -> v12…) pour que les téléphones reprennent tous les fichiers.
    ============================================================ */
 
-const CACHE = 'carnet-taxi-v10';
+const CACHE = 'carnet-taxi-v11';
 const FICHIERS = [
   './',
   './index.html',
   './css/style.css',
   './js/db.js',
+  './js/patients.js',
   './js/recherche-lieux.js',
   './js/adresses.js',
   './js/tarif-medical.js',

@@ -780,6 +780,55 @@ dialog.panneau h3 {
 .liste-stats .texte-doux { margin: 0; }
 .liste-stats strong { font-family: var(--police-chiffres); font-variant-numeric: tabular-nums; }
 
+/* ============================================================
+   Mes patients et fiche patient
+   ============================================================ */
+
+.champ-recherche { margin: 4px 0 14px; min-height: 48px; padding: 11px 15px; font-size: 16px; }
+.liste-patients {
+  list-style: none;
+  margin: 0;
+  padding: 0 14px;
+  border-radius: var(--rayon);
+  background: var(--surface);
+}
+.liste-patients.vide { background: none; }
+.liste-patients li + li .ligne-patient { border-top: 1px solid var(--separateur); }
+.ligne-patient {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 0;
+  border: none;
+  background: none;
+  text-align: left;
+}
+.ligne-patient:active { opacity: 0.6; }
+.ligne-patient .c-sous + .c-sous { margin-top: 0; font-size: 13px; color: var(--texte-faible); }
+.avatar {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent-doux);
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.entete-fiche { display: flex; align-items: center; gap: 14px; margin: 6px 0 14px; }
+.entete-fiche .avatar { width: 54px; height: 54px; font-size: 20px; }
+.entete-fiche-texte { display: flex; flex-direction: column; min-width: 0; }
+.entete-fiche-texte strong { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+.entete-fiche-texte small { font-size: 14px; color: var(--texte-doux); margin-top: 2px; }
+#ecran-fiche .lien-appel { margin: 0 0 18px; }
+.note-fiche { margin: -6px 2px 16px; font-size: 13px; }
+#ecran-fiche .liste-stats li span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#ecran-fiche .liste-jour { margin-bottom: 20px; }
+
 /* ---------- Mes collègues taxi (réglages) ---------- */
 .liste-collegues {
   list-style: none;

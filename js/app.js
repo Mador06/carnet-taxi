@@ -92,8 +92,10 @@ const etat = {
   jour: aujourdhui(),                       // jour affiché sur la feuille
   filtre: 'jour',                           // 'jour' (la journée) ou 'sansbon' (bons manquants, tous les jours)
   typesSansBon: { medical: true, donne: true },          // types affichés dans « Bons manquants »
-  ecran: null,                              // formulaire ouvert : 'prive', 'medical', 'donne' ou null
-  edition: { prive: null, medical: null, donne: null }   // id de la course en cours de modification
+  ecran: null,                              // écran ouvert : 'prive', 'medical', 'donne', 'stats', 'patients', 'fiche' ou null
+  edition: { prive: null, medical: null, donne: null },  // id de la course en cours de modification
+  patientChoisi: null,                      // fiche choisie dans les suggestions du formulaire Médical
+  patientOuvert: null                       // fiche affichée dans « Mes patients »
 };
 
 const formPrive = $('#form-prive');
@@ -264,7 +266,8 @@ const PASTILLES = {
   donne: { lettre: 'D', classe: ' c-type-d', nom: 'Médical donné' }
 };
 
-function ligneCourse(store, heure, c) {
+// titreRemplace : texte affiché à la place du nom (ex. la destination, dans l'historique d'un patient)
+function ligneCourse(store, heure, c, titreRemplace) {
   let titre, sous, droite;
   if (store === 'prive') {
     titre = c.station;
@@ -293,7 +296,7 @@ function ligneCourse(store, heure, c) {
     el('span', { className: 'c-heure', textContent: heure }),
     el('span', { className: 'c-type' + pastille.classe, textContent: pastille.lettre, title: pastille.nom }),
     el('span', { className: 'c-texte' },
-      el('span', { className: 'c-titre', textContent: titre }),
+      el('span', { className: 'c-titre', textContent: titreRemplace || titre }),
       el('span', { className: 'c-sous' }, ...[].concat(sous))
     ),
     droite
@@ -555,7 +558,7 @@ function ouvrirFormulaire(store, course = null) {
   $(`#btn-supprimer-${store}`).hidden = !course;
 
   $('#accueil').hidden = true;
-  for (const s of STORES) $(`#ecran-${s}`).hidden = s !== store;
+  document.querySelectorAll('.ecran').forEach(s => { s.hidden = s.id !== `ecran-${store}`; });
   window.scrollTo(0, 0);
 }
 
@@ -563,7 +566,7 @@ function fermerFormulaire() {
   etat.ecran = null;
   etat.edition = { prive: null, medical: null, donne: null };
   for (const s of STORES) $(`#ecran-${s}`).hidden = true;
-  $('#ecran-stats').hidden = true;
+  for (const s of ['stats', 'patients', 'fiche']) $(`#ecran-${s}`).hidden = true;
   $('#accueil').hidden = false;
   window.scrollTo(0, 0);
   return afficherFeuille();
@@ -574,7 +577,9 @@ document.querySelectorAll('[data-fermer-ecran]').forEach(b => b.addEventListener
 async function supprimerCourse(store) {
   const id = etat.edition[store];
   if (!id || !confirm('Supprimer cette course ?\n\nCette action est définitive.')) return;
+  const course = await DB.lire(store, id);
   await DB.supprimer(store, id);
+  if (store === 'medical' && course && course.patientId) await recalculerPatient(course.patientId);
   await fermerFormulaire();
   message('Course supprimée');
 }
@@ -708,7 +713,7 @@ async function quandAdresseChange() {
 }
 
 brancherSuggestions(champDepart, quandAdresseChange);
-brancherSuggestions(champArrivee, quandAdresseChange);
+brancherSuggestions(champArrivee, quandAdresseChange, destinationsDuPatient);
 
 formMedical.elements.km.addEventListener('input', () => { majInfoKm(); majPrixAuto(); });
 formMedical.elements.trajet.addEventListener('change', () => { majInfoKm(); majPrixAuto(); });
@@ -726,6 +731,7 @@ function reinitFormMedical() {
   definirAdresse(champArrivee, null);
   numeroCalculKm++;
   prixSaisiALaMain = false;
+  etat.patientChoisi = null;
   majInfoKm();
   majBlocTaxiBon();
 }
@@ -771,7 +777,20 @@ formMedical.addEventListener('submit', async e => {
       creeLe: ancienne ? ancienne.creeLe : maintenant,
       modifieLe: maintenant
     };
+    // Fiche patient (une erreur ici n'empêche jamais d'enregistrer la course)
+    try {
+      course.patientId = await fichePourCourse(course, ancienne);
+    } catch (erreur) {
+      console.error('Fiche patient :', erreur);
+      if (ancienne && ancienne.patientId) course.patientId = ancienne.patientId;
+    }
     await DB.enregistrer('medical', course);
+    try {
+      if (course.patientId) await recalculerPatient(course.patientId);
+      if (ancienne && ancienne.patientId && ancienne.patientId !== course.patientId) await recalculerPatient(ancienne.patientId);
+    } catch (erreur) {
+      console.error('Fiche patient :', erreur);
+    }
     if (course.taxiBon) await memoriserCollegue(course.taxiBon, '');
     // Retour sur la feuille du jour de la course (en mode « Bons manquants », on reste où on était)
     if (etat.filtre === 'jour') etat.jour = course.date;
@@ -842,10 +861,10 @@ async function afficherCollegues() {
   }
 }
 
-/* ---------- Suggestions des taxis déjà saisis (champ « taxi ») ---------- */
-// quandChoisi(collegue) est appelé quand on touche une suggestion.
-// Renvoie la fonction qui ferme la liste.
-function brancherSuggestionsTaxi(champ, quandChoisi) {
+/* ---------- Petite liste de suggestions sous un champ (taxis, patients) ---------- */
+// options : chercher(texte) -> éléments, icone, titre(élément), detail(élément),
+// quandChoisi(élément). Renvoie la fonction qui ferme la liste.
+function brancherSuggestionsSimples(champ, options) {
   const liste = el('ul', { className: 'suggestions', hidden: true });
   champ.closest('.champ-adresse').append(liste);
 
@@ -854,36 +873,54 @@ function brancherSuggestionsTaxi(champ, quandChoisi) {
     liste.replaceChildren();
   };
 
-  // Chaque mot tapé doit commencer un mot du nom
   function suggerer() {
-    const mots = normaliser(champ.value).split(' ').filter(Boolean);
-    const trouves = collegues.filter(c => {
-      const motsNom = normaliser(c.nom).split(' ');
-      return mots.every(m => motsNom.some(n => n.startsWith(m)));
-    }).slice(0, 6);
-    liste.replaceChildren(...trouves.map(c => {
+    const trouves = options.chercher(champ.value).slice(0, 6);
+    liste.replaceChildren(...trouves.map(element => {
+      const detail = options.detail(element);
       const bouton = el('button', { type: 'button', className: 'suggestion' },
-        el('span', { className: 'sugg-icone', textContent: '🚕' }),
+        el('span', { className: 'sugg-icone', textContent: options.icone }),
         el('span', { className: 'sugg-texte' },
-          el('strong', { textContent: c.nom }),
-          c.telephone ? el('small', { textContent: c.telephone }) : null
+          el('strong', { textContent: options.titre(element) }),
+          detail ? el('small', { textContent: detail }) : null
         )
       );
+      // pointerdown plutôt que click : le choix est pris avant que le champ perde le focus
       bouton.addEventListener('pointerdown', e => {
         e.preventDefault();
-        champ.value = c.nom;
+        champ.value = options.titre(element);
         fermer();
-        quandChoisi(c);
+        options.quandChoisi(element);
       });
       return el('li', {}, bouton);
     }));
     liste.hidden = trouves.length === 0;
+    if (!liste.hidden) {
+      document.querySelectorAll('.suggestions').forEach(autre => { if (autre !== liste) autre.hidden = true; });
+    }
   }
 
   champ.addEventListener('input', suggerer);
   champ.addEventListener('focus', suggerer);
   champ.addEventListener('blur', () => setTimeout(fermer, 150));
   return fermer;
+}
+
+// Chaque mot tapé doit commencer un mot du texte (sans majuscules ni accents, dans n'importe quel ordre)
+function motsCommencent(tape, texte) {
+  const motsTexte = normaliser(texte).split(' ');
+  return normaliser(tape).split(' ').filter(Boolean).every(m => motsTexte.some(n => n.startsWith(m)));
+}
+
+/* ---------- Suggestions des taxis déjà saisis (champ « taxi ») ---------- */
+// quandChoisi(collegue) est appelé quand on touche une suggestion.
+function brancherSuggestionsTaxi(champ, quandChoisi) {
+  return brancherSuggestionsSimples(champ, {
+    chercher: texte => collegues.filter(c => motsCommencent(texte, c.nom)),
+    icone: '🚕',
+    titre: c => c.nom,
+    detail: c => c.telephone,
+    quandChoisi
+  });
 }
 
 /* ---------- Bon de transport du formulaire Médical ---------- */
@@ -982,6 +1019,298 @@ formDonne.addEventListener('submit', async e => {
   }
 });
 
+/* ---------- Fiches patients ---------- */
+
+let patients = [];   // toutes les fiches, gardées en mémoire pour les suggestions
+
+async function chargerPatients() {
+  patients = await DB.tout('patients');
+  return patients;
+}
+
+// Dernière course la plus récente d'abord, puis par nom
+const triPatients = (a, b) => String(b.derniereCourse || '').localeCompare(String(a.derniereCourse || ''))
+  || String(a.nom).localeCompare(String(b.nom), 'fr');
+
+// Patients dont le nom (ou le téléphone) correspond à ce qui est tapé, dès 2 lettres
+function chercherPatients(texte) {
+  const tape = texte.trim();
+  if (normaliser(tape).replace(/ /g, '').length < 2) return [];
+  const chiffres = tape.replace(/\D/g, '');
+  return patients
+    .filter(p => motsCommencent(tape, p.nom)
+      || (chiffres.length >= 4 && chiffres === tape.replace(/\s/g, '') && telPatient(p.telephone).includes(chiffres)))
+    .sort(triPatients);
+}
+
+function detailPatient(p) {
+  const morceaux = [];
+  if (p.adresse) morceaux.push(p.adresse);
+  if (p.derniereCourse) morceaux.push('dernière course le ' + dateFr(p.derniereCourse));
+  return morceaux.join(' · ');
+}
+
+// Formulaire Médical : choisir un patient remplit ses habitudes (tout reste modifiable)
+function remplirDepuisPatient(p) {
+  const c = formMedical.elements;
+  etat.patientChoisi = p.id;
+  c.nom.value = p.nom;
+  if (p.telephone) c.telephone.value = p.telephone;
+  if (p.adresse) definirAdresse(champDepart, { label: p.adresse, ...(p.coord || {}) });
+  if (p.destination) definirAdresse(champArrivee, { label: p.destination, ...(p.destinationCoord || {}) });
+  if (p.trajet) c.trajet.value = p.trajet;
+  if (p.priseEnCharge) c.priseEnCharge.value = p.priseEnCharge;
+  quandAdresseChange();   // calcul des km comme d'habitude
+  majPrixAuto();
+}
+
+brancherSuggestionsSimples(formMedical.elements.nom, {
+  chercher: chercherPatients,
+  icone: '👤',
+  titre: p => p.nom,
+  detail: detailPatient,
+  quandChoisi: remplirDepuisPatient
+});
+// Le nom est retapé : ce n'est peut-être plus le patient choisi
+formMedical.elements.nom.addEventListener('input', () => { etat.patientChoisi = null; });
+
+// Formulaire Médical donné : on propose aussi les patients connus (nom seulement)
+brancherSuggestionsSimples(formDonne.elements.nom, {
+  chercher: chercherPatients,
+  icone: '👤',
+  titre: p => p.nom,
+  detail: detailPatient,
+  quandChoisi: () => {}
+});
+
+// La fiche correspondant au formulaire Médical : celle choisie, ou celle qui a exactement ce nom
+function patientDuFormulaire() {
+  if (etat.patientChoisi) return patients.find(p => p.id === etat.patientChoisi) || null;
+  const nom = formMedical.elements.nom.value;
+  return patients.filter(p => memeNomPatient(p.nom, nom)).sort(triPatients)[0] || null;
+}
+
+// Champ « Adresse d'arrivée » : 🕘 les destinations déjà utilisées par ce patient, en premier
+function destinationsDuPatient(texte) {
+  const p = patientDuFormulaire();
+  if (!p || !p.destinations) return [];
+  const actuelle = normaliser(champArrivee.value);
+  return p.destinations
+    .filter(d => normaliser(d.adresse) !== actuelle || texte)
+    .filter(d => !texte || motsCommencent(texte, d.adresse))
+    .slice(0, 4)
+    .map(d => ({
+      type: 'habitude',
+      nom: d.adresse,
+      detail: `Déjà utilisée · ${d.nb} fois`,
+      adresse: d.adresse,
+      lat: d.coord ? d.coord.lat : undefined,
+      lon: d.coord ? d.coord.lon : undefined
+    }));
+}
+
+// À l'enregistrement d'une course médicale : quelle fiche ? (créée si besoin)
+// Même patient si le nom correspond (dans n'importe quel ordre) ou si le téléphone est identique.
+// Même nom mais autre téléphone : on demande.
+async function fichePourCourse(course, ancienne) {
+  await chargerPatients();
+  const parId = id => (id ? patients.find(p => p.id === id) : null);
+
+  // 1. Patient choisi dans les suggestions
+  let fiche = parId(etat.patientChoisi);
+  if (fiche) return fiche.id;
+
+  // 2. Course modifiée, toujours le même patient
+  fiche = ancienne && parId(ancienne.patientId);
+  if (fiche && (memeNomPatient(fiche.nom, course.nom) || memeTelPatient(fiche.telephone, course.telephone))) return fiche.id;
+
+  // 3. Recherche par nom et par téléphone
+  const parNom = patients.filter(p => memeNomPatient(p.nom, course.nom)).sort(triPatients);
+  const parTel = patients.filter(p => memeTelPatient(p.telephone, course.telephone)).sort(triPatients);
+  fiche = parNom.find(p => parTel.includes(p)) || parTel[0]
+    || parNom.find(p => !telPatient(p.telephone) || !telPatient(course.telephone));
+  if (fiche) return fiche.id;
+
+  if (parNom.length) {
+    const doute = parNom[0];
+    const memePersonne = confirm(
+      `Une fiche « ${doute.nom} » existe déjà avec un autre numéro (${doute.telephone}).\n\n` +
+      `OK : c'est la même personne (la fiche est mise à jour avec le nouveau numéro)\n` +
+      `Annuler : c'est un autre patient (nouvelle fiche)`);
+    if (memePersonne) return doute.id;
+  }
+
+  // 4. Nouvelle fiche
+  const maintenant = new Date().toISOString();
+  const nouvelle = { id: nouvelId(), nom: course.nom, telephone: course.telephone, creeLe: maintenant, modifieLe: maintenant };
+  await DB.enregistrer('patients', nouvelle);
+  return nouvelle.id;
+}
+
+// Recalcule une fiche à partir de toutes ses courses médicales
+async function recalculerPatient(id) {
+  const fiche = await DB.lire('patients', id);
+  if (!fiche) return;
+  const courses = (await DB.tout('medical')).filter(c => c.patientId === id);
+  await DB.enregistrer('patients', resumerPatient(fiche, courses));
+  await chargerPatients();
+}
+
+/* ---------- Écrans « Mes patients » et fiche patient ---------- */
+
+function montrerEcran(nom) {
+  etat.ecran = nom;
+  $('#accueil').hidden = true;
+  document.querySelectorAll('.ecran').forEach(s => { s.hidden = s.id !== `ecran-${nom}`; });
+  window.scrollTo(0, 0);
+}
+
+const initiales = nom => normaliser(nom).split(' ').filter(Boolean).slice(0, 2).map(m => m[0].toUpperCase()).join('');
+
+async function ouvrirPatients() {
+  await chargerPatients();
+  montrerEcran('patients');
+  afficherListePatients();
+}
+
+function afficherListePatients() {
+  const tape = $('#recherche-patient').value.trim();
+  const chiffres = tape.replace(/\D/g, '');
+  const liste = patients
+    .filter(p => !tape || motsCommencent(tape, `${p.nom} ${p.adresse || ''}`)
+      || (chiffres.length >= 2 && telPatient(p.telephone).includes(chiffres)))
+    .sort(triPatients);
+  const ul = $('#liste-patients');
+  ul.replaceChildren();
+  ul.classList.toggle('vide', liste.length === 0);
+  if (liste.length === 0) {
+    ul.append(el('li', { className: 'liste-vide' },
+      tape ? 'Aucun patient trouvé' : 'Aucun patient pour le moment',
+      el('small', { textContent: tape ? 'Essayez une autre recherche' : 'Les fiches se créent à chaque course médicale' })));
+    return;
+  }
+  for (const p of liste) {
+    const resume = [pluriel(p.nbCourses || 0, 'course')];
+    if (p.derniereCourse) resume.push('dernière le ' + dateFr(p.derniereCourse));
+    const bouton = el('button', { type: 'button', className: 'ligne-patient' },
+      el('span', { className: 'avatar', textContent: initiales(p.nom) }),
+      el('span', { className: 'c-texte' },
+        el('span', { className: 'c-titre', textContent: p.nom }),
+        el('span', { className: 'c-sous', textContent: p.adresse || p.telephone || '' }),
+        el('span', { className: 'c-sous', textContent: resume.join(' · ') })));
+    bouton.addEventListener('click', () => ouvrirFiche(p.id));
+    ul.append(el('li', {}, bouton));
+  }
+}
+
+$('#recherche-patient').addEventListener('input', afficherListePatients);
+$('#btn-mes-patients').addEventListener('click', () => {
+  panneauReglages.close();
+  ouvrirPatients().catch(e => message(e.message, true));
+});
+$('#retour-patients').addEventListener('click', () => ouvrirPatients().catch(e => message(e.message, true)));
+
+const formFiche = $('#form-fiche');
+const ficheAdresse = $('#fiche-adresse');
+const ficheDestination = $('#fiche-destination');
+brancherSuggestions(ficheAdresse, () => {});
+brancherSuggestions(ficheDestination, () => {});
+
+// Lien « Appeler » (formulaire de la fiche)
+function majAppelFiche() {
+  const tel = formFiche.elements.telephone.value.trim();
+  const lien = $('#fiche-appel');
+  lien.hidden = telPatient(tel).length < 4;
+  lien.href = 'tel:' + chiffresTel(tel);
+  lien.textContent = '📞 Appeler ' + tel;
+}
+formFiche.elements.telephone.addEventListener('input', majAppelFiche);
+
+async function ouvrirFiche(id) {
+  const p = await DB.lire('patients', id);
+  if (!p) { message('Fiche introuvable', true); return ouvrirPatients(); }
+  etat.patientOuvert = id;
+  montrerEcran('fiche');
+
+  $('#fiche-initiales').textContent = initiales(p.nom);
+  $('#fiche-titre').textContent = p.nom;
+  const resume = [pluriel(p.nbCourses || 0, 'course')];
+  if (p.derniereCourse) resume.push('dernière le ' + dateFr(p.derniereCourse));
+  $('#fiche-resume').textContent = resume.join(' · ');
+
+  const c = formFiche.elements;
+  c.nom.value = p.nom;
+  c.telephone.value = p.telephone || '';
+  definirAdresse(ficheAdresse, { label: p.adresse || '', ...(p.coord || {}) });
+  definirAdresse(ficheDestination, { label: p.destination || '', ...(p.destinationCoord || {}) });
+  c.trajet.value = p.trajet || '';
+  c.priseEnCharge.value = p.priseEnCharge || '';
+  majAppelFiche();
+
+  // Destinations déjà utilisées
+  const destinations = p.destinations || [];
+  $('#titre-destinations').hidden = destinations.length === 0;
+  $('#fiche-destinations').replaceChildren(...destinations.map(d => el('li', {},
+    el('span', { textContent: d.adresse }),
+    el('strong', { textContent: d.nb + '×' }))));
+
+  // Historique : ses courses médicales, de la plus récente à la plus ancienne
+  const courses = plusRecentesDabord((await DB.tout('medical')).filter(x => x.patientId === id));
+  const ul = $('#fiche-historique');
+  ul.replaceChildren();
+  ul.classList.toggle('vide', courses.length === 0);
+  if (courses.length === 0) {
+    ul.append(el('li', { className: 'liste-vide' }, 'Aucune course', el('small', { textContent: 'Les courses supprimées ne sont plus listées' })));
+  }
+  let annee = null;
+  for (const course of courses) {
+    if (course.date.slice(0, 4) !== annee) {
+      annee = course.date.slice(0, 4);
+      ul.append(el('li', { className: 'groupe-date', textContent: annee }));
+    }
+    const [, mois, jour] = course.date.split('-');
+    const destination = String(course.adresseArrivee || '').split(' — ')[0] || 'Destination non indiquée';
+    ul.append(ligneCourse('medical', `${jour}/${mois}`, course, destination));
+  }
+}
+
+formFiche.addEventListener('submit', async e => {
+  e.preventDefault();
+  const c = formFiche.elements;
+  const nom = c.nom.value.trim();
+  if (!nom) { message('Indiquez le nom', true); c.nom.focus(); return; }
+  try {
+    const p = await DB.lire('patients', etat.patientOuvert);
+    if (!p) throw new Error('Fiche introuvable');
+    await DB.enregistrer('patients', {
+      ...p,
+      nom,
+      telephone: c.telephone.value.trim(),
+      adresse: ficheAdresse.value.trim(),
+      coord: lireCoordonnees(ficheAdresse),
+      destination: ficheDestination.value.trim(),
+      destinationCoord: lireCoordonnees(ficheDestination),
+      trajet: c.trajet.value,
+      priseEnCharge: c.priseEnCharge.value,
+      modifieLe: new Date().toISOString()
+    });
+    await chargerPatients();
+    await ouvrirFiche(p.id);
+    message('Fiche enregistrée ✓');
+  } catch (erreur) {
+    console.error(erreur);
+    message("Erreur d'enregistrement : " + erreur.message, true);
+  }
+});
+
+$('#btn-supprimer-fiche').addEventListener('click', async () => {
+  const p = patients.find(x => x.id === etat.patientOuvert);
+  if (!p || !confirm(`Supprimer la fiche de « ${p.nom} » ?\n\nSes courses passées sont conservées.`)) return;
+  await DB.supprimer('patients', p.id);
+  await ouvrirPatients();
+  message('Fiche supprimée');
+});
+
 /* ---------- Panneaux qui montent du bas (« + » et Réglages) ---------- */
 
 const panneauAjout = $('#panneau-ajout');
@@ -1034,12 +1363,13 @@ async function partagerFichier(nom, contenu, type) {
 async function exporterJSON() {
   const donnees = {
     application: 'carnet-taxi',
-    version: 2,
+    version: 3,
     exporteLe: new Date().toISOString(),
     prive: await DB.tout('prive'),
     medical: await DB.tout('medical'),
     donne: await DB.tout('donne'),
-    collegues: await DB.tout('collegues')
+    collegues: await DB.tout('collegues'),
+    patients: await DB.tout('patients')
   };
   await partagerFichier(`carnet-taxi-sauvegarde-${aujourdhui()}.json`,
     JSON.stringify(donnees, null, 2), 'application/json');
@@ -1055,13 +1385,20 @@ async function importerJSON(fichier) {
   }
   const estCourse = c => c && typeof c.id === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(c.date);
   const estCollegue = c => c && typeof c.id === 'string' && typeof c.nom === 'string';
-  // "donne" et "collegues" n'existent pas dans les anciennes sauvegardes
+  // "donne", "collegues" et "patients" n'existent pas dans les anciennes sauvegardes
   const listeValide = (liste, test) => liste === undefined || (Array.isArray(liste) && liste.every(test));
   if (!donnees || !Array.isArray(donnees.prive) || !Array.isArray(donnees.medical)
       || ![...donnees.prive, ...donnees.medical].every(estCourse)
-      || !listeValide(donnees.donne, estCourse) || !listeValide(donnees.collegues, estCollegue)) {
+      || !listeValide(donnees.donne, estCourse) || !listeValide(donnees.collegues, estCollegue)
+      || !listeValide(donnees.patients, estCollegue)) {
     message("Ce fichier n'est pas une sauvegarde Carnet Taxi", true);
     return;
+  }
+  // Sauvegarde d'avant les fiches patients : on les recrée à partir de ses courses médicales
+  if (!Array.isArray(donnees.patients)) {
+    const { patients: fiches, liens } = construirePatients(donnees.medical);
+    donnees.patients = fiches;
+    donnees.medical = donnees.medical.map(c => ({ ...c, patientId: liens.get(c.id) || null }));
   }
   const detailDonne = Array.isArray(donnees.donne)
     ? `${donnees.donne.length} course(s) donnée(s) et ${(donnees.collegues || []).length} collègue(s).`
@@ -1069,13 +1406,14 @@ async function importerJSON(fichier) {
   const ok = confirm(
     `Restaurer cette sauvegarde ?\n\n` +
     `${donnees.prive.length} course(s) privée(s), ${donnees.medical.length} course(s) médicale(s).\n` +
-    `${detailDonne}\n\n` +
+    `${detailDonne}\n${donnees.patients.length} fiche(s) patient.\n\n` +
     `ATTENTION : les données actuellement sur ce téléphone seront remplacées.`
   );
   if (!ok) return;
   try {
     await DB.remplacerTout(donnees);
     await chargerCollegues();
+    await chargerPatients();
     panneauReglages.close();
     await afficherFeuille();
     message('Sauvegarde restaurée ✓');
@@ -1162,6 +1500,7 @@ async function demarrer() {
   await afficherFeuille();
   chargerEtablissements();   // prépare la liste des établissements à l'avance
   await chargerCollegues();
+  await chargerPatients();
 
   // Demande au navigateur de ne pas effacer nos données s'il manque de place
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});

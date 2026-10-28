@@ -3,14 +3,15 @@
    "Tiroirs" (stores) :
    - "prive", "medical", "donne" : les courses (rangées par date)
    - "collegues" : les taxis à qui l'on donne des courses (nom + téléphone)
+   - "patients" : les fiches patients (voir patients.js)
    Rien n'est envoyé sur Internet.
    ============================================================ */
 
 const DB_NOM = 'carnet-taxi';
-// 2 : favoris "lieux" ; 3 : favoris retirés ; 4 : médical donné + collègues
-const DB_VERSION = 4;
+// 2 : favoris "lieux" ; 3 : favoris retirés ; 4 : médical donné + collègues ; 5 : fiches patients
+const DB_VERSION = 5;
 const STORES = ['prive', 'medical', 'donne'];   // les courses
-const STORES_TOUS = [...STORES, 'collegues'];
+const STORES_TOUS = [...STORES, 'collegues', 'patients'];
 
 let promesseDB = null;
 
@@ -20,8 +21,9 @@ function ouvrirDB() {
       const req = indexedDB.open(DB_NOM, DB_VERSION);
       // Appelé la toute première fois (ou si on change DB_VERSION).
       // Les tiroirs déjà existants (et leurs courses) ne sont pas touchés.
-      req.onupgradeneeded = () => {
+      req.onupgradeneeded = evenement => {
         const db = req.result;
+        const nouveauTiroirPatients = !db.objectStoreNames.contains('patients');
         for (const nom of STORES_TOUS) {
           if (!db.objectStoreNames.contains(nom)) {
             const store = db.createObjectStore(nom, { keyPath: 'id' });
@@ -30,6 +32,20 @@ function ouvrirDB() {
         }
         // Ancien tiroir des favoris (version 2), qui n'existe plus
         if (db.objectStoreNames.contains('lieux')) db.deleteObjectStore('lieux');
+
+        // Version 5 : fiches patients créées à partir des courses médicales déjà là.
+        // Tout se fait dans la même opération que la mise à jour : si ça échoue, rien ne change.
+        if (nouveauTiroirPatients && evenement.oldVersion > 0) {
+          const tx = req.transaction;
+          const medical = tx.objectStore('medical');
+          medical.getAll().onsuccess = e => {
+            const { patients, liens } = construirePatients(e.target.result);
+            for (const fiche of patients) tx.objectStore('patients').put(fiche);
+            for (const course of e.target.result) {
+              if (liens.has(course.id)) medical.put({ ...course, patientId: liens.get(course.id) });
+            }
+          };
+        }
       };
       req.onsuccess = () => resoudre(req.result);
       req.onerror = () => rejeter(req.error);
@@ -69,7 +85,7 @@ const DB = {
 
   // Restauration : remplace TOUT en une seule fois.
   // Si une erreur survient, rien n'est modifié (transaction annulée).
-  // Une ancienne sauvegarde (sans "donne" ni "collegues") ne touche pas à ces tiroirs.
+  // Une ancienne sauvegarde (sans "donne", "collegues" ou "patients") ne touche pas à ces tiroirs.
   async remplacerTout(donnees) {
     const db = await ouvrirDB();
     const stores = STORES_TOUS.filter(nom => nom === 'prive' || nom === 'medical' || Array.isArray(donnees[nom]));
