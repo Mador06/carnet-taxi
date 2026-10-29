@@ -780,6 +780,58 @@ dialog.panneau h3 {
 .liste-stats .texte-doux { margin: 0; }
 .liste-stats strong { font-family: var(--police-chiffres); font-variant-numeric: tabular-nums; }
 
+/* ---------- Frais fixes : carte des statistiques et écran ---------- */
+.carte-frais {
+  margin-bottom: 14px;
+  padding: 16px 16px 14px;
+  border-radius: var(--rayon);
+  background: var(--surface);
+}
+.carte-frais .graphique-entete { margin-bottom: 10px; }
+.carte-frais .texte-doux { margin: 0 0 12px; }
+.carte-frais .btn { margin-bottom: 0; }
+.barre-frais {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+.barre-frais .remplissage {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #c99a2a, var(--accent));
+  transition: width 0.5s ease;
+}
+.barre-frais.couvert .remplissage { background: linear-gradient(90deg, #3fae6f, var(--hausse)); }
+.frais-reste, .frais-benefice {
+  margin-top: 12px;
+  font-family: var(--police-chiffres);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.frais-benefice { color: var(--hausse); }
+.frais-info { margin-top: 3px; font-size: 13px; color: var(--texte-doux); }
+
+#ecran-frais .resume { margin-top: 4px; }
+.ligne-frais {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 0;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 16px;
+}
+.ligne-frais:active, .ligne-frais.actif { opacity: 0.6; }
+.liste-stats li:has(.ligne-frais) { padding: 0; }
+.frais-nom { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.frais-nom small { font-size: 13px; color: var(--texte-faible); margin-top: 1px; }
+.ligne-frais strong { font-family: var(--police-chiffres); font-variant-numeric: tabular-nums; }
+#ecran-frais > .texte-doux { margin: -4px 2px 0; font-size: 13px; }
+
 /* ============================================================
    Mes patients et fiche patient
    ============================================================ */

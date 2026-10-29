@@ -4,14 +4,15 @@
    - "prive", "medical", "donne" : les courses (rangées par date)
    - "collegues" : les taxis à qui l'on donne des courses (nom + téléphone)
    - "patients" : les fiches patients (voir patients.js)
+   - "reglages" : les réglages, ex. { id: 'frais', liste: [...] } pour les frais fixes
    Rien n'est envoyé sur Internet.
    ============================================================ */
 
 const DB_NOM = 'carnet-taxi';
-// 2 : favoris "lieux" ; 3 : favoris retirés ; 4 : médical donné + collègues ; 5 : fiches patients
-const DB_VERSION = 5;
+// 2 : favoris "lieux" ; 3 : favoris retirés ; 4 : médical donné + collègues ; 5 : fiches patients ; 6 : réglages (frais fixes)
+const DB_VERSION = 6;
 const STORES = ['prive', 'medical', 'donne'];   // les courses
-const STORES_TOUS = [...STORES, 'collegues', 'patients'];
+const STORES_TOUS = [...STORES, 'collegues', 'patients', 'reglages'];
 
 let promesseDB = null;
 
@@ -85,7 +86,7 @@ const DB = {
 
   // Restauration : remplace TOUT en une seule fois.
   // Si une erreur survient, rien n'est modifié (transaction annulée).
-  // Une ancienne sauvegarde (sans "donne", "collegues" ou "patients") ne touche pas à ces tiroirs.
+  // Une ancienne sauvegarde (sans "donne", "collegues", "patients" ou "reglages") ne touche pas à ces tiroirs.
   async remplacerTout(donnees) {
     const db = await ouvrirDB();
     const stores = STORES_TOUS.filter(nom => nom === 'prive' || nom === 'medical' || Array.isArray(donnees[nom]));

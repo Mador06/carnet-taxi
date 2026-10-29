@@ -283,6 +283,9 @@
       <div class="puces" id="stats-detail-ca"></div>
     </section>
 
+    <!-- Frais fixes : barre de progression jusqu'au bénéfice -->
+    <section class="carte-frais" id="stats-frais"></section>
+
     <!-- Graphique : un bâton par jour (mois) ou par mois (année) -->
     <section class="carte-graphique" id="stats-graphique"></section>
 
@@ -290,6 +293,45 @@
 
     <h3 class="titre-section" id="titre-paiements">Paiements (courses privées)</h3>
     <ul class="liste-stats" id="stats-paiements"></ul>
+  </section>
+
+  <!-- ===================== FRAIS FIXES ===================== -->
+  <section class="ecran" id="ecran-frais" hidden>
+    <div class="barre-ecran">
+      <button type="button" class="btn-texte" id="retour-frais">‹ Retour</button>
+      <h2>Frais fixes</h2>
+      <span class="barre-espace"></span>
+    </div>
+
+    <section class="resume">
+      <div class="resume-libelle">Total par mois</div>
+      <div class="total" id="frais-total"></div>
+      <div class="puces" id="frais-detail"></div>
+    </section>
+
+    <ul class="liste-stats" id="liste-frais"></ul>
+
+    <h3 class="titre-section" id="titre-form-frais">Ajouter un frais</h3>
+    <form id="form-frais" class="formulaire" autocomplete="off">
+      <label>Nom
+        <input type="text" name="nom" placeholder="Ex. assurance, licence, crédit voiture" autocapitalize="sentences" required>
+      </label>
+      <div class="ligne-2">
+        <label>Montant (€)
+          <input type="text" name="montant" inputmode="decimal" placeholder="0,00" required>
+        </label>
+        <label>Fréquence
+          <select name="frequence">
+            <option value="mois">Par mois</option>
+            <option value="an">Par an</option>
+          </select>
+        </label>
+      </div>
+      <button type="submit" class="btn btn-principal" id="btn-valider-frais">Ajouter</button>
+      <button type="button" class="btn btn-danger" id="btn-supprimer-frais" hidden>Supprimer ce frais</button>
+      <button type="button" class="btn btn-fermer" id="btn-annuler-frais" hidden>Annuler la modification</button>
+    </form>
+    <p class="texte-doux">Un frais « par an » compte pour 1/12 chaque mois. Touchez un frais pour le modifier.</p>
   </section>
 
   <!-- ===================== MES PATIENTS ===================== -->
@@ -401,6 +443,10 @@
       <button type="button" class="btn btn-secondaire" data-csv="medical">Médical</button>
     </div>
     <button type="button" class="btn btn-secondaire" data-csv="donne">Médical donné</button>
+
+    <h3>Mes frais fixes</h3>
+    <p class="texte-doux">Pour savoir chaque mois à partir de quand vous êtes en bénéfice (Statistiques).</p>
+    <button type="button" class="btn btn-secondaire" id="btn-mes-frais">Gérer mes frais fixes</button>
 
     <h3>Mes patients</h3>
     <p class="texte-doux">Fiches créées automatiquement à chaque course médicale.</p>

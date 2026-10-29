@@ -5,10 +5,10 @@
    télécharge la nouvelle version en arrière-plan.
    Les services en ligne (IGN, Photon) ne sont jamais mis en mémoire.
    Quand on change un fichier de l'app : changer le numéro de CACHE
-   (v11 -> v12…) pour que les téléphones reprennent tous les fichiers.
+   (v12 -> v13…) pour que les téléphones reprennent tous les fichiers.
    ============================================================ */
 
-const CACHE = 'carnet-taxi-v11';
+const CACHE = 'carnet-taxi-v12';
 const FICHIERS = [
   './',
   './index.html',

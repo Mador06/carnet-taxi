@@ -410,6 +410,7 @@ async function afficherStats() {
     puce('', 'Privé', euros(ch.caPrive)),
     puce('point-m', 'Médical', euros(ch.caMedical)));
 
+  carteFrais(ch, periode, ref);
   graphiqueStats(toutes, periode, ref);
 
   // Petites cases de chiffres
@@ -537,6 +538,174 @@ $('#periode-suivante').addEventListener('click', () => {
   etat.stats.ref = decalerPeriode(etat.stats.periode, etat.stats.ref, 1);
   afficherStats();
 });
+/* ---------- Frais fixes ---------- */
+
+let fraisFixes = [];   // [{ id, nom, montant, frequence: 'mois' ou 'an' }]
+let fraisEnModification = null;
+
+async function chargerFrais() {
+  const reglage = await DB.lire('reglages', 'frais');
+  fraisFixes = reglage && Array.isArray(reglage.liste) ? reglage.liste : [];
+}
+const enregistrerFrais = () => DB.enregistrer('reglages', { id: 'frais', liste: fraisFixes });
+
+// Un frais annuel compte pour 1/12 chaque mois
+const fraisParMois = f => (f.frequence === 'an' ? f.montant / 12 : f.montant);
+const totalFraisMois = () => somme(fraisFixes, fraisParMois);
+
+// Statistiques (vue Mois ou Année) : barre de progression du chiffre d'affaires vers les frais fixes
+function carteFrais(ch, periode, ref) {
+  const zone = $('#stats-frais');
+  zone.hidden = periode === 'jour';
+  if (periode === 'jour') return;
+
+  const frais = totalFraisMois() * (periode === 'mois' ? 1 : 12);
+  const entete = el('div', { className: 'graphique-entete' },
+    el('span', { textContent: periode === 'mois' ? 'Frais fixes du mois' : "Frais fixes de l'année" }),
+    frais > 0 ? el('span', { className: 'texte-doux', textContent: `${euros(ch.ca)} / ${euros(frais)}` }) : null);
+
+  if (frais <= 0) {
+    const bouton = el('button', { type: 'button', className: 'btn btn-secondaire', textContent: 'Indiquer mes frais fixes' });
+    bouton.addEventListener('click', () => ouvrirFrais('stats'));
+    zone.replaceChildren(entete,
+      el('p', { className: 'texte-doux', textContent: 'Indiquez vos frais fixes (assurance, licence, crédit…) pour savoir à partir de quand vous êtes en bénéfice.' }),
+      bouton);
+    return;
+  }
+
+  const couvert = ch.ca >= frais;
+  const remplissage = el('div', { className: 'remplissage' });
+  remplissage.style.width = `${Math.min(100, (ch.ca / frais) * 100)}%`;
+  const barre = el('div', { className: 'barre-frais' + (couvert ? ' couvert' : '') }, remplissage);
+
+  const lignes = [];
+  if (couvert) {
+    // Jour où le cumul du chiffre d'affaires a dépassé les frais
+    const parJour = new Map();
+    for (const c of [...ch.prive, ...ch.medical]) parJour.set(c.date, (parJour.get(c.date) || 0) + (c.prix || 0));
+    let cumul = 0;
+    let jourCouvert = null;
+    for (const date of [...parJour.keys()].sort()) {
+      cumul += parJour.get(date);
+      if (cumul >= frais) { jourCouvert = date; break; }
+    }
+    lignes.push(el('div', { className: 'frais-benefice', textContent: `Bénéfice : +${euros(ch.ca - frais)}` }));
+    lignes.push(el('div', { className: 'frais-info',
+      textContent: `✓ Frais couverts${jourCouvert ? ' le ' + titreDuJour(jourCouvert).date : ''} — vous êtes en bénéfice depuis.` }));
+  } else {
+    const reste = frais - ch.ca;
+    lignes.push(el('div', { className: 'frais-reste', textContent: `Encore ${euros(reste)} avant le bénéfice` }));
+    let info = `Frais couverts à ${Math.floor((ch.ca / frais) * 100)} %`;
+    // Mois en cours : ce qu'il faut faire par jour d'ici la fin du mois
+    if (periode === 'mois' && prefixePeriode('mois', ref) === aujourdhui().slice(0, 7)) {
+      const d = new Date();
+      const joursRestants = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() - d.getDate() + 1;
+      info += ` · soit ${euros(reste / joursRestants)} par jour sur les ${pluriel(joursRestants, 'jour')} restants`;
+    }
+    lignes.push(el('div', { className: 'frais-info', textContent: info }));
+  }
+  zone.replaceChildren(entete, barre, ...lignes);
+}
+
+// Écran des frais fixes ; d'où l'on vient ('stats' ou 'reglages') pour le bouton Retour
+let retourFrais = 'reglages';
+
+function ouvrirFrais(depuis) {
+  retourFrais = depuis;
+  montrerEcran('frais');
+  reinitFormFrais();
+  afficherFrais();
+}
+
+function afficherFrais() {
+  const total = totalFraisMois();
+  $('#frais-total').textContent = euros(total);
+  $('#frais-detail').replaceChildren(
+    el('span', { className: 'puce' }, 'Par an ', el('strong', { textContent: euros(total * 12) })),
+    el('span', { className: 'puce' }, 'Par jour ', el('strong', { textContent: euros((total * 12) / 365) })));
+  const ul = $('#liste-frais');
+  ul.replaceChildren(...[...fraisFixes].sort((a, b) => fraisParMois(b) - fraisParMois(a)).map(f => {
+    const bouton = el('button', { type: 'button', className: 'ligne-frais' + (f.id === fraisEnModification ? ' actif' : '') },
+      el('span', { className: 'frais-nom' },
+        el('span', { textContent: f.nom }),
+        el('small', { textContent: f.frequence === 'an' ? `${euros(f.montant)} par an` : 'par mois' })),
+      el('strong', { textContent: euros(fraisParMois(f)) }));
+    bouton.addEventListener('click', () => modifierFrais(f));
+    return el('li', {}, bouton);
+  }));
+}
+
+const formFrais = $('#form-frais');
+
+function reinitFormFrais() {
+  fraisEnModification = null;
+  formFrais.reset();
+  $('#titre-form-frais').textContent = 'Ajouter un frais';
+  $('#btn-valider-frais').textContent = 'Ajouter';
+  $('#btn-supprimer-frais').hidden = true;
+  $('#btn-annuler-frais').hidden = true;
+}
+
+function modifierFrais(f) {
+  fraisEnModification = f.id;
+  const c = formFrais.elements;
+  c.nom.value = f.nom;
+  c.montant.value = versChamp(f.montant);
+  c.frequence.value = f.frequence;
+  $('#titre-form-frais').textContent = 'Modifier « ' + f.nom + ' »';
+  $('#btn-valider-frais').textContent = 'Enregistrer';
+  $('#btn-supprimer-frais').hidden = false;
+  $('#btn-annuler-frais').hidden = false;
+  afficherFrais();
+  $('#titre-form-frais').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+formFrais.addEventListener('submit', async e => {
+  e.preventDefault();
+  const c = formFrais.elements;
+  const nom = c.nom.value.trim();
+  const montant = lireNombre(c.montant.value);
+  if (!nom) { message('Indiquez le nom du frais', true); c.nom.focus(); return; }
+  if (montant == null || Number.isNaN(montant) || montant <= 0) { message('Montant invalide', true); c.montant.focus(); return; }
+  const frais = { id: fraisEnModification || nouvelId(), nom, montant: arrondi(montant, 2), frequence: c.frequence.value };
+  const modification = Boolean(fraisEnModification);
+  fraisFixes = modification ? fraisFixes.map(f => (f.id === frais.id ? frais : f)) : [...fraisFixes, frais];
+  try {
+    await enregistrerFrais();
+    reinitFormFrais();
+    afficherFrais();
+    message(modification ? 'Frais modifié ✓' : 'Frais ajouté ✓');
+  } catch (erreur) {
+    console.error(erreur);
+    message("Erreur d'enregistrement : " + erreur.message, true);
+    await chargerFrais();
+  }
+});
+
+$('#btn-supprimer-frais').addEventListener('click', async () => {
+  const f = fraisFixes.find(x => x.id === fraisEnModification);
+  if (!f || !confirm(`Supprimer le frais « ${f.nom} » ?`)) return;
+  fraisFixes = fraisFixes.filter(x => x.id !== f.id);
+  await enregistrerFrais();
+  reinitFormFrais();
+  afficherFrais();
+  message('Frais supprimé');
+});
+$('#btn-annuler-frais').addEventListener('click', () => { reinitFormFrais(); afficherFrais(); });
+
+$('#retour-frais').addEventListener('click', () => {
+  if (retourFrais === 'stats') {
+    montrerEcran('stats');
+    afficherStats().catch(e => message(e.message, true));
+  } else {
+    fermerFormulaire();
+  }
+});
+$('#btn-mes-frais').addEventListener('click', () => {
+  panneauReglages.close();
+  ouvrirFrais('reglages');
+});
+
 /* ---------- Ouverture / fermeture des formulaires ---------- */
 
 // Pour chaque type de course : titre, remise à zéro et remplissage du formulaire
@@ -566,7 +735,7 @@ function fermerFormulaire() {
   etat.ecran = null;
   etat.edition = { prive: null, medical: null, donne: null };
   for (const s of STORES) $(`#ecran-${s}`).hidden = true;
-  for (const s of ['stats', 'patients', 'fiche']) $(`#ecran-${s}`).hidden = true;
+  for (const s of ['stats', 'frais', 'patients', 'fiche']) $(`#ecran-${s}`).hidden = true;
   $('#accueil').hidden = false;
   window.scrollTo(0, 0);
   return afficherFeuille();
@@ -1369,7 +1538,8 @@ async function exporterJSON() {
     medical: await DB.tout('medical'),
     donne: await DB.tout('donne'),
     collegues: await DB.tout('collegues'),
-    patients: await DB.tout('patients')
+    patients: await DB.tout('patients'),
+    reglages: await DB.tout('reglages')
   };
   await partagerFichier(`carnet-taxi-sauvegarde-${aujourdhui()}.json`,
     JSON.stringify(donnees, null, 2), 'application/json');
@@ -1390,7 +1560,8 @@ async function importerJSON(fichier) {
   if (!donnees || !Array.isArray(donnees.prive) || !Array.isArray(donnees.medical)
       || ![...donnees.prive, ...donnees.medical].every(estCourse)
       || !listeValide(donnees.donne, estCourse) || !listeValide(donnees.collegues, estCollegue)
-      || !listeValide(donnees.patients, estCollegue)) {
+      || !listeValide(donnees.patients, estCollegue)
+      || !listeValide(donnees.reglages, r => r && typeof r.id === 'string')) {
     message("Ce fichier n'est pas une sauvegarde Carnet Taxi", true);
     return;
   }
@@ -1414,6 +1585,7 @@ async function importerJSON(fichier) {
     await DB.remplacerTout(donnees);
     await chargerCollegues();
     await chargerPatients();
+    await chargerFrais();
     panneauReglages.close();
     await afficherFeuille();
     message('Sauvegarde restaurée ✓');
@@ -1501,6 +1673,7 @@ async function demarrer() {
   chargerEtablissements();   // prépare la liste des établissements à l'avance
   await chargerCollegues();
   await chargerPatients();
+  await chargerFrais();
 
   // Demande au navigateur de ne pas effacer nos données s'il manque de place
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
